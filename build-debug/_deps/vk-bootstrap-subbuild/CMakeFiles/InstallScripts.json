@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-subbuild/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

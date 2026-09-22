@@ -1,0 +1,21 @@
+# ninja log v7
+1	20	1790100921328577751	vk-bootstrap-populate-prefix/src/vk-bootstrap-populate-stamp/vk-bootstrap-populate-mkdir	8a747d51ed34b4f7
+1	20	1790100921328577751	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-subbuild/vk-bootstrap-populate-prefix/src/vk-bootstrap-populate-stamp/vk-bootstrap-populate-mkdir	8a747d51ed34b4f7
+20	37324	1790100958631720039	vk-bootstrap-populate-prefix/src/vk-bootstrap-populate-stamp/vk-bootstrap-populate-download	7a5c2ac0595968d2
+20	37324	1790100958631720039	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-subbuild/vk-bootstrap-populate-prefix/src/vk-bootstrap-populate-stamp/vk-bootstrap-populate-download	7a5c2ac0595968d2
+37324	37342	1790100958632720016	vk-bootstrap-populate-prefix/src/vk-bootstrap-populate-stamp/vk-bootstrap-populate-update	6d6f5207b8235dc7
+37324	37342	1790100958632720016	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-subbuild/vk-bootstrap-populate-prefix/src/vk-bootstrap-populate-stamp/vk-bootstrap-populate-update	6d6f5207b8235dc7
+37342	37362	1790100958669719165	vk-bootstrap-populate-prefix/src/vk-bootstrap-populate-stamp/vk-bootstrap-populate-patch	afc4127618ad23c2
+37342	37362	1790100958669719165	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-subbuild/vk-bootstrap-populate-prefix/src/vk-bootstrap-populate-stamp/vk-bootstrap-populate-patch	afc4127618ad23c2
+37362	37382	1790100958689718705	vk-bootstrap-populate-prefix/src/vk-bootstrap-populate-stamp/vk-bootstrap-populate-configure	abad957c7a7bcb16
+37362	37382	1790100958689718705	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-subbuild/vk-bootstrap-populate-prefix/src/vk-bootstrap-populate-stamp/vk-bootstrap-populate-configure	abad957c7a7bcb16
+37382	37398	1790100958705718338	vk-bootstrap-populate-prefix/src/vk-bootstrap-populate-stamp/vk-bootstrap-populate-build	91e28b9d8a5a80f5
+37382	37398	1790100958705718338	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-subbuild/vk-bootstrap-populate-prefix/src/vk-bootstrap-populate-stamp/vk-bootstrap-populate-build	91e28b9d8a5a80f5
+37398	37418	1790100958725717878	vk-bootstrap-populate-prefix/src/vk-bootstrap-populate-stamp/vk-bootstrap-populate-install	ab7c9c154c1e8553
+37398	37418	1790100958725717878	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-subbuild/vk-bootstrap-populate-prefix/src/vk-bootstrap-populate-stamp/vk-bootstrap-populate-install	ab7c9c154c1e8553
+37418	37437	1790100958745717418	vk-bootstrap-populate-prefix/src/vk-bootstrap-populate-stamp/vk-bootstrap-populate-test	dd54ff8b0be32d33
+37418	37437	1790100958745717418	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-subbuild/vk-bootstrap-populate-prefix/src/vk-bootstrap-populate-stamp/vk-bootstrap-populate-test	dd54ff8b0be32d33
+37438	37467	1790100958774716751	CMakeFiles/vk-bootstrap-populate-complete	f5655e165de6838f
+37438	37467	1790100958774716751	vk-bootstrap-populate-prefix/src/vk-bootstrap-populate-stamp/vk-bootstrap-populate-done	f5655e165de6838f
+37438	37467	1790100958774716751	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-subbuild/CMakeFiles/vk-bootstrap-populate-complete	f5655e165de6838f
+37438	37467	1790100958774716751	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-subbuild/vk-bootstrap-populate-prefix/src/vk-bootstrap-populate-stamp/vk-bootstrap-populate-done	f5655e165de6838f

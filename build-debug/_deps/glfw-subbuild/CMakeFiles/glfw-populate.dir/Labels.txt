@@ -1,0 +1,14 @@
+# Target labels
+ glfw-populate
+# Source files and their labels
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-subbuild/CMakeFiles/glfw-populate
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-subbuild/CMakeFiles/glfw-populate.rule
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-subbuild/CMakeFiles/glfw-populate-complete.rule
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-build.rule
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-configure.rule
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-download.rule
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-install.rule
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-mkdir.rule
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-patch.rule
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-test.rule
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-update.rule

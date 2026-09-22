@@ -1,0 +1,21 @@
+# ninja log v7
+1	17	1790101032598019324	imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-mkdir	fcc1cde6fb42e032
+1	17	1790101032598019324	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-subbuild/imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-mkdir	fcc1cde6fb42e032
+17	269001	1790101301581834545	imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-download	e1d20f3a9cff33d6
+17	269001	1790101301581834545	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-subbuild/imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-download	e1d20f3a9cff33d6
+269001	269016	1790101301582834522	imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-update	ecd10aa1bcdc0566
+269001	269016	1790101301582834522	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-subbuild/imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-update	ecd10aa1bcdc0566
+269016	269031	1790101301611833855	imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-patch	73a2fbb0c2cdf8a
+269016	269031	1790101301611833855	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-subbuild/imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-patch	73a2fbb0c2cdf8a
+269031	269045	1790101301626833510	imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-configure	e0b6d390d06a551
+269031	269045	1790101301626833510	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-subbuild/imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-configure	e0b6d390d06a551
+269045	269059	1790101301640833188	imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-build	c54c03301f36f5eb
+269045	269059	1790101301640833188	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-subbuild/imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-build	c54c03301f36f5eb
+269059	269073	1790101301654832867	imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-install	ee0177b1f7006023
+269059	269073	1790101301654832867	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-subbuild/imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-install	ee0177b1f7006023
+269073	269088	1790101301668832544	imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-test	b3dd356b198c200b
+269073	269088	1790101301668832544	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-subbuild/imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-test	b3dd356b198c200b
+269088	269107	1790101301688832085	CMakeFiles/imgui-populate-complete	feccd7552b6aabd7
+269088	269107	1790101301688832085	imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-done	feccd7552b6aabd7
+269088	269107	1790101301688832085	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-subbuild/CMakeFiles/imgui-populate-complete	feccd7552b6aabd7
+269088	269107	1790101301688832085	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-subbuild/imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-done	feccd7552b6aabd7

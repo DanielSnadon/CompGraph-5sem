@@ -1,0 +1,21 @@
+# ninja log v7
+1	24	1790100958864714682	vulkanmemoryallocator-populate-prefix/src/vulkanmemoryallocator-populate-stamp/vulkanmemoryallocator-populate-mkdir	68eb8e23f03e08b4
+1	24	1790100958864714682	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-subbuild/vulkanmemoryallocator-populate-prefix/src/vulkanmemoryallocator-populate-stamp/vulkanmemoryallocator-populate-mkdir	68eb8e23f03e08b4
+24	73586	1790101032428023233	vulkanmemoryallocator-populate-prefix/src/vulkanmemoryallocator-populate-stamp/vulkanmemoryallocator-populate-download	bc0596a489e9f965
+24	73586	1790101032428023233	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-subbuild/vulkanmemoryallocator-populate-prefix/src/vulkanmemoryallocator-populate-stamp/vulkanmemoryallocator-populate-download	bc0596a489e9f965
+73586	73603	1790101032429023210	vulkanmemoryallocator-populate-prefix/src/vulkanmemoryallocator-populate-stamp/vulkanmemoryallocator-populate-update	d31cc73b4d5e493
+73586	73603	1790101032429023210	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-subbuild/vulkanmemoryallocator-populate-prefix/src/vulkanmemoryallocator-populate-stamp/vulkanmemoryallocator-populate-update	d31cc73b4d5e493
+73603	73617	1790101032459022521	vulkanmemoryallocator-populate-prefix/src/vulkanmemoryallocator-populate-stamp/vulkanmemoryallocator-populate-patch	47738de8b55e0c
+73603	73617	1790101032459022521	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-subbuild/vulkanmemoryallocator-populate-prefix/src/vulkanmemoryallocator-populate-stamp/vulkanmemoryallocator-populate-patch	47738de8b55e0c
+73617	73631	1790101032472022222	vulkanmemoryallocator-populate-prefix/src/vulkanmemoryallocator-populate-stamp/vulkanmemoryallocator-populate-configure	d4f614bb29dd4ba9
+73617	73631	1790101032472022222	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-subbuild/vulkanmemoryallocator-populate-prefix/src/vulkanmemoryallocator-populate-stamp/vulkanmemoryallocator-populate-configure	d4f614bb29dd4ba9
+73631	73643	1790101032485021923	vulkanmemoryallocator-populate-prefix/src/vulkanmemoryallocator-populate-stamp/vulkanmemoryallocator-populate-build	e3c6d2431dd15bd9
+73631	73643	1790101032485021923	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-subbuild/vulkanmemoryallocator-populate-prefix/src/vulkanmemoryallocator-populate-stamp/vulkanmemoryallocator-populate-build	e3c6d2431dd15bd9
+73643	73657	1790101032498021624	vulkanmemoryallocator-populate-prefix/src/vulkanmemoryallocator-populate-stamp/vulkanmemoryallocator-populate-install	ad12ccc007c92edd
+73643	73657	1790101032498021624	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-subbuild/vulkanmemoryallocator-populate-prefix/src/vulkanmemoryallocator-populate-stamp/vulkanmemoryallocator-populate-install	ad12ccc007c92edd
+73657	73669	1790101032511021325	vulkanmemoryallocator-populate-prefix/src/vulkanmemoryallocator-populate-stamp/vulkanmemoryallocator-populate-test	618e4bb2680e8c36
+73657	73669	1790101032511021325	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-subbuild/vulkanmemoryallocator-populate-prefix/src/vulkanmemoryallocator-populate-stamp/vulkanmemoryallocator-populate-test	618e4bb2680e8c36
+73669	73693	1790101032534020796	CMakeFiles/vulkanmemoryallocator-populate-complete	cf38cd7062d80b71
+73669	73693	1790101032534020796	vulkanmemoryallocator-populate-prefix/src/vulkanmemoryallocator-populate-stamp/vulkanmemoryallocator-populate-done	cf38cd7062d80b71
+73669	73693	1790101032534020796	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-subbuild/CMakeFiles/vulkanmemoryallocator-populate-complete	cf38cd7062d80b71
+73669	73693	1790101032534020796	/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-subbuild/vulkanmemoryallocator-populate-prefix/src/vulkanmemoryallocator-populate-stamp/vulkanmemoryallocator-populate-done	cf38cd7062d80b71
