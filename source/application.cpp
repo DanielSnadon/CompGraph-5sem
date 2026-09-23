@@ -10,6 +10,8 @@ VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
 VkShaderModule vertexShader = VK_NULL_HANDLE;
 VkShaderModule fragmentShader = VK_NULL_HANDLE;
 
+VkPipeline graphicsPipeline = VK_NULL_HANDLE;
+
 bool initialize() {
 
 	// 1. Pipeline layout creation
@@ -17,11 +19,7 @@ bool initialize() {
 	VkPipelineLayoutCreateInfo layoutInfo{};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 
-	if (vkCreatePipelineLayout(
-			graphics::internal::context.device,
-			&layoutInfo,
-			nullptr,
-			&pipelineLayout) != VK_SUCCESS)
+	if (vkCreatePipelineLayout(graphics::internal::context.device, &layoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
 		{
 			std::cerr << "Не удалость создать pipeline layout.\n";
 			return false;
@@ -89,10 +87,53 @@ bool initialize() {
 										VK_COLOR_COMPONENT_A_BIT;
 	colorAttachment.blendEnable = VK_FALSE;
 
-	VkPipelineColorBlendStateCreateInfo colorBlendInfo{};
-	colorBlendInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-	colorBlendInfo.attachmentCount = 1;
-	colorBlendInfo.pAttachments = &colorAttachment;
+	VkPipelineColorBlendStateCreateInfo blendInfo{};
+	blendInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	blendInfo.attachmentCount = 1;
+	blendInfo.pAttachments = &colorAttachment;
+
+	// 9. Scissor and viewport - part 2: dynamic states
+
+	const VkDynamicState dynamicStates[] = {
+		VK_DYNAMIC_STATE_VIEWPORT,
+		VK_DYNAMIC_STATE_SCISSOR
+	};
+
+	VkPipelineDynamicStateCreateInfo dynamicInfo{};
+	dynamicInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	dynamicInfo.dynamicStateCount = sizeof(dynamicStates) / sizeof(dynamicStates[0]);
+	dynamicInfo.pDynamicStates = dynamicStates;
+
+	// 10. Pipeline info
+
+	VkGraphicsPipelineCreateInfo pipelineInfo{};
+	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+
+	pipelineInfo.stageCount = 2;
+	pipelineInfo.pStages = shaderStages;
+
+	pipelineInfo.pVertexInputState = &vertexInputInfo;
+	pipelineInfo.pInputAssemblyState = &inputAssemblyInfo;
+	pipelineInfo.pViewportState = &viewportInfo;
+	pipelineInfo.pRasterizationState = &rasterInfo;
+	pipelineInfo.pDepthStencilState = &depthInfo;
+	pipelineInfo.pMultisampleState = &sampleInfo;
+	pipelineInfo.pColorBlendState = &blendInfo;
+	pipelineInfo.pDynamicState = &dynamicInfo;
+
+	pipelineInfo.layout = pipelineLayout;
+	pipelineInfo.renderPass = graphics::internal::context.render_pass;
+	pipelineInfo.subpass = 0;
+
+	// 11. The pipeline
+
+	if (vkCreateGraphicsPipelines(graphics::internal::context.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS)
+		{
+			std::cerr << "Не удалось создать графический pipeline.\n";
+			return false;
+		}
+
+	
 
 	return true;
 }
@@ -101,6 +142,7 @@ void shutdown() {
 	auto& context = graphics::internal::context;
 	vkQueueWaitIdle(context.graphics_queue);
 
+	vkDestroyPipeline(context.device, graphicsPipeline, nullptr);
 	vkDestroyPipelineLayout(context.device, pipelineLayout, nullptr);
 }
 
