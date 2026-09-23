@@ -19,7 +19,7 @@ VkShaderModule loadShaderModule(const char path[]) {
 
 	const size_t size = file.tellg();
 
-	std::vector<char> buffer(size / sizeof(uint32_t));
+	std::vector<uint32_t> buffer(size / sizeof(uint32_t));
 
 	file.seekg(0);
 	file.read(reinterpret_cast<char*>(buffer.data()), size);
@@ -28,7 +28,7 @@ VkShaderModule loadShaderModule(const char path[]) {
 	VkShaderModuleCreateInfo info{
 		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
 		.codeSize = size,
-		.pCode = reinterpret_cast<const uint32_t*>(buffer.data()),
+		.pCode = buffer.data(),
 	};
 	
 	VkShaderModule result;
@@ -180,6 +180,9 @@ void shutdown() {
 
 	vkDestroyPipeline(context.device, graphicsPipeline, nullptr);
 	vkDestroyPipelineLayout(context.device, pipelineLayout, nullptr);
+
+	vkDestroyShaderModule(context.device, vertexShader, nullptr);
+	vkDestroyShaderModule(context.device, fragmentShader, nullptr);
 }
 
 void update([[maybe_unused]] double time) {
@@ -198,7 +201,7 @@ void render(const graphics::internal::FrameData& fd) {
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
 	vkBeginCommandBuffer(fd.command_buffer, &beginInfo);
-
+	
 	VkClearValue clearValues[2]{};
 	clearValues[0].color = {{0.01f, 0.01f, 0.01f, 1.0f}};
 	clearValues[1].depthStencil = {1.0f, 0};
@@ -211,7 +214,28 @@ void render(const graphics::internal::FrameData& fd) {
 	renderPassInfo.clearValueCount = 2;
 	renderPassInfo.pClearValues = clearValues;
 
+	// II. Main.
+
 	vkCmdBeginRenderPass(fd.command_buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+	const VkViewport viewport{
+		.x = 0, .y = 0,
+		.width = float(context.swapchain_extent.width),
+		.height = float(context.swapchain_extent.height),
+		.minDepth = 0.0f, .maxDepth = 1.0
+	};
+
+	const VkRect2D scissor{
+		.extent = context.swapchain_extent,
+	};
+
+	vkCmdSetViewport(fd.command_buffer, 0, 1, &viewport);
+	vkCmdSetScissor(fd.command_buffer, 0, 1, &scissor);
+
+	vkCmdBindPipeline(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+
+	vkCmdDraw(fd.command_buffer, 3, 1, 0, 0);
+
 	vkCmdEndRenderPass(fd.command_buffer);
 	vkEndCommandBuffer(fd.command_buffer);
 }
