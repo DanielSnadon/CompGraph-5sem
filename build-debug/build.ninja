@@ -164,7 +164,7 @@ build vulkan-starter-app: CXX_EXECUTABLE_LINKER__vulkan-starter-app_Debug CMakeF
 #############################################
 # Utility command for shaders
 
-build shaders: phony
+build shaders: phony CMakeFiles/shaders /home/snadon/ComputerGraphics-5sem/shaders/basic.frag.spv /home/snadon/ComputerGraphics-5sem/shaders/basic.vert.spv
 
 
 #############################################
@@ -231,6 +231,30 @@ build CMakeFiles/install/strip.util: CUSTOM_COMMAND all
   restat = 1
 
 build install/strip: phony CMakeFiles/install/strip.util
+
+
+#############################################
+# Phony custom command for CMakeFiles/shaders
+
+build CMakeFiles/shaders | ${cmake_ninja_workdir}CMakeFiles/shaders: phony /home/snadon/ComputerGraphics-5sem/shaders/basic.vert.spv /home/snadon/ComputerGraphics-5sem/shaders/basic.frag.spv
+
+
+#############################################
+# Custom command for /home/snadon/ComputerGraphics-5sem/shaders/basic.frag.spv
+
+build /home/snadon/ComputerGraphics-5sem/shaders/basic.frag.spv: CUSTOM_COMMAND /home/snadon/ComputerGraphics-5sem/shaders/basic.frag
+  COMMAND = cd /home/snadon/ComputerGraphics-5sem/build-debug && glslc /home/snadon/ComputerGraphics-5sem/shaders/basic.frag -o /home/snadon/ComputerGraphics-5sem/shaders/basic.frag.spv
+  DESC = Compiling basic.frag shader
+  restat = 1
+
+
+#############################################
+# Custom command for /home/snadon/ComputerGraphics-5sem/shaders/basic.vert.spv
+
+build /home/snadon/ComputerGraphics-5sem/shaders/basic.vert.spv: CUSTOM_COMMAND /home/snadon/ComputerGraphics-5sem/shaders/basic.vert
+  COMMAND = cd /home/snadon/ComputerGraphics-5sem/build-debug && glslc /home/snadon/ComputerGraphics-5sem/shaders/basic.vert -o /home/snadon/ComputerGraphics-5sem/shaders/basic.vert.spv
+  DESC = Compiling basic.vert shader
+  restat = 1
 
 # =============================================================================
 # Write statements declared in CMakeLists.txt:
