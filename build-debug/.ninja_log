@@ -60,7 +60,7 @@
 190	341	1790101412686279912	_deps/glfw-build/src/CMakeFiles/glfw.dir/linux_joystick.c.o	a7fe819c0cd01d69
 166	436	1790101412662280464	_deps/glfw-build/src/CMakeFiles/glfw.dir/wl_init.c.o	cc9bf94427dc7c76
 151	468	1790101412647280809	_deps/glfw-build/src/CMakeFiles/glfw.dir/x11_window.c.o	993deb28d8156e79
-3	163	1790106148240348564	CMakeFiles/vulkan-starter-app.dir/source/application.cpp.o	ede0e0c9530de6a2
+140	300	1790108141166226058	CMakeFiles/vulkan-starter-app.dir/source/application.cpp.o	ede0e0c9530de6a2
 210	525	1790101412706279452	CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/backends/imgui_impl_glfw.cpp.o	a29f1121a312d946
 174	631	1790101412670587785	_deps/glfw-build/src/CMakeFiles/glfw.dir/wl_window.c.o	ab74252feeb5cd1
 238	704	1790101412734278808	CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/backends/imgui_impl_vulkan.cpp.o	2e3f12048a7271f1
@@ -70,13 +70,12 @@
 295	1479	1790101412791277496	CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/imgui_tables.cpp.o	ed391b640ea5106c
 271	1895	1790101412767278048	CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/imgui_draw.cpp.o	a03aa89d58a34545
 297	1968	1790101412793277450	CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/imgui_widgets.cpp.o	21bbf1eb71528065
-5	1688	1790107266923268984	CMakeFiles/vulkan-starter-app.dir/source/graphics_internal.cpp.o	42275ceac8909c99
+140	1704	1790108141165424276	CMakeFiles/vulkan-starter-app.dir/source/graphics_internal.cpp.o	42275ceac8909c99
 29	2208	1790101412526054066	_deps/vk-bootstrap-build/CMakeFiles/vk-bootstrap.dir/src/VkBootstrap.cpp.o	13cb6fd9b1ae931a
 2208	2279	1790101414704233501	_deps/vk-bootstrap-build/libvk-bootstrap.a	d871f9dc975d3710
 266	2335	1790101412762278163	CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/imgui.cpp.o	d7c11b8a9b341c04
-1688	1848	1790107268606232902	vulkan-starter-app	5edffeae47bd6c46
+1704	1850	1790108142729392671	vulkan-starter-app	5edffeae47bd6c46
 4	137	1790108141152424539	/home/snadon/ComputerGraphics-5sem/shaders/basic.frag.spv	32a73cb1e3404359
 4	139	1790108141154424499	/home/snadon/ComputerGraphics-5sem/shaders/basic.vert.spv	c80a37faddece6b1
-140	300	1790108141166226058	CMakeFiles/vulkan-starter-app.dir/source/application.cpp.o	ede0e0c9530de6a2
-140	1704	1790108141165424276	CMakeFiles/vulkan-starter-app.dir/source/graphics_internal.cpp.o	42275ceac8909c99
-1704	1850	1790108142729392671	vulkan-starter-app	5edffeae47bd6c46
+29	772	1790165904210940267	CMakeFiles/vulkan-starter-app.dir/source/application.cpp.o	ede0e0c9530de6a2
+772	1136	1790165904953929669	vulkan-starter-app	5edffeae47bd6c46
