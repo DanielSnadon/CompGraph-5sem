@@ -1,5 +1,7 @@
 #include "application.hpp"
 
+#include <fstream>
+#include <vector>
 #include <imgui.h>
 #include <iostream>
 
@@ -12,6 +14,31 @@ VkShaderModule fragmentShader = VK_NULL_HANDLE;
 
 VkPipeline graphicsPipeline = VK_NULL_HANDLE;
 
+VkShaderModule loadShaderModule(const char path[]) {
+	std::ifstream file(path, std::ios::binary | std::ios::ate);
+
+	const size_t size = file.tellg();
+
+	std::vector<char> buffer(size / sizeof(uint32_t));
+
+	file.seekg(0);
+	file.read(reinterpret_cast<char*>(buffer.data()), size);
+	file.close();
+
+	VkShaderModuleCreateInfo info{
+		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+		.codeSize = size,
+		.pCode = reinterpret_cast<const uint32_t*>(buffer.data()),
+	};
+	
+	VkShaderModule result;
+	if (vkCreateShaderModule(graphics::internal::context.device, &info, nullptr, &result) != VK_SUCCESS)
+	{
+		return nullptr;
+	}
+	return result;
+}
+
 bool initialize() {
 
 	// 1. Pipeline layout creation
@@ -20,13 +47,22 @@ bool initialize() {
 	layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 
 	if (vkCreatePipelineLayout(graphics::internal::context.device, &layoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
-		{
-			std::cerr << "Не удалость создать pipeline layout.\n";
-			return false;
-		}
-
+	{
+		std::cerr << "Не удалость создать pipeline layout.\n";
+		return false;
+	}
+	
 	// 2. Using shaders...
 
+	vertexShader = loadShaderModule("shaders/basic.vert.spv");
+	fragmentShader = loadShaderModule("shaders/basic.frag.spv");
+
+	if (vertexShader == VK_NULL_HANDLE || fragmentShader == VK_NULL_HANDLE)
+	{
+		std::cerr << "Не удалось загрузить шейдеры.\n";
+		return false;
+	}
+	
 	VkPipelineShaderStageCreateInfo shaderStages[2]{};
 
 	shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -128,10 +164,10 @@ bool initialize() {
 	// 11. The pipeline
 
 	if (vkCreateGraphicsPipelines(graphics::internal::context.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS)
-		{
-			std::cerr << "Не удалось создать графический pipeline.\n";
-			return false;
-		}
+	{
+		std::cerr << "Не удалось создать графический pipeline.\n";
+		return false;
+	}
 
 	
 
