@@ -4,8 +4,24 @@
 #include <vector>
 #include <imgui.h>
 #include <iostream>
+#include <cmath>
+#include <numbers>
+#include <string>
 
 namespace application {
+
+VkBuffer vertexBuffer = VK_NULL_HANDLE;
+VmaAllocation vertexBufferAllocation = nullptr;
+Vertex* vertexBufferMemory = nullptr;
+
+struct Vertex {
+	float position[3];
+	float color[3];
+};
+std::vector<Vertex> cylinderVertices;
+std::vector<uint32_t> cylinderIndices;
+
+constexpr uint32_t cylinderSegments = 50;
 
 VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
 
@@ -39,9 +55,87 @@ VkShaderModule loadShaderModule(const char path[]) {
 	return result;
 }
 
+// Building цилиндр
+
+void generateCylinderGeometry() {
+	cylinderVertices.clear();
+	cylinderIndices.clear();
+
+	cylinderVertices.reserve(cylinderSegments * 2 + 2);
+	cylinderIndices.reserve(cylinderSegments * 12);
+
+	constexpr float radius = 0.5f;
+	constexpr float height = 0.5f;
+
+	for (uint32_t i = 0; i < cylinderSegments; ++i)
+	{
+		const float angle = 2.0f * std::numbers::pi_v<float> * float(i) / float(cylinderSegments);
+		const float x = radius * std::cos(angle);
+		const float z = radius * std::sin(angle);
+
+		cylinderVertices.push_back({
+			.position = {x, -height, z},
+			.color = {0.2f, 0.6f, 1.0f},
+		});
+
+		cylinderVertices.push_back({
+			.position = {x, height, z},
+			.color = {1.0f, 0.4f, 0.2f},
+		});
+	}
+
+	cylinderVertices.push_back({
+		.position = {0.0f, -height, 0.0f},
+		.color = {0.2f, 0.6f, 1.0f},
+	});
+
+	cylinderVertices.push_back({
+		.position = {0.0f, height, 0.0f},
+		.color = {1.0f, 0.4f, 0.2f},
+	});
+
+	const uint32_t bottomCenter = cylinderSegments * 2;
+	const uint32_t topCenter = bottomCenter + 1;
+
+	for (uint32_t i = 0; i < cylinderSegments; ++i)
+	{
+		const uint32_t next = (i + 1) % cylinderSegments;
+
+		const uint32_t bottom = i * 2;
+		const uint32_t top = bottom + 1;
+
+		const uint32_t nextBottom = next * 2;
+		const uint32_t nextTop = nextBottom + 1;
+
+		cylinderIndices.insert(cylinderIndices.end(), {
+			bottom, top, nextBottom,
+			nextBottom, top, nextTop,
+			bottomCenter, bottom, nextBottom,
+			topCenter, nextTop, top,
+		});
+	}
+
+}
+
 bool initialize() {
 
-	// 1. Pipeline layout creation
+	// 1. Cylinder...
+
+	generateCylinderGeometry();
+
+	// auto& context = graphics::internal::context;
+	// const size_t vertexDataSize = cylinderVertices.size() * sizeof(Vertex);
+
+	// VkBufferCreateInfo vertexBufferInfo{
+	// 	.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+	// 	.size = vertexDataSize,
+	// 	.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+	// 	.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+	// };
+
+
+
+	// 2. Pipeline layout creation
 
 	VkPipelineLayoutCreateInfo layoutInfo{};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -52,7 +146,7 @@ bool initialize() {
 		return false;
 	}
 	
-	// 2. Using shaders...
+	// 3. Using shaders...
 
 	vertexShader = loadShaderModule("shaders/basic.vert.spv");
 	fragmentShader = loadShaderModule("shaders/basic.frag.spv");
@@ -75,7 +169,7 @@ bool initialize() {
 	shaderStages[1].module = fragmentShader;
 	shaderStages[1].pName = "main";
 
-	// 3. Vector Input / Input Assembly
+	// 4. Vector Input / Input Assembly
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -84,14 +178,14 @@ bool initialize() {
 	inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 	inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
-	// 4. Scissor / Viewport
+	// 5. Scissor / Viewport
 
 	VkPipelineViewportStateCreateInfo viewportInfo{};
 	viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 	viewportInfo.viewportCount = 1;
 	viewportInfo.scissorCount = 1;
 
-	// 5. Rasterization
+	// 6. Rasterization
 
 	VkPipelineRasterizationStateCreateInfo rasterInfo{};
 	rasterInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
@@ -100,7 +194,7 @@ bool initialize() {
 	rasterInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
 	rasterInfo.lineWidth = 1.0f;
 
-	// 6. Depth test
+	// 7. Depth test
 
 	VkPipelineDepthStencilStateCreateInfo depthInfo{};
 	depthInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -108,13 +202,13 @@ bool initialize() {
 	depthInfo.depthWriteEnable = VK_TRUE;
 	depthInfo.depthCompareOp = VK_COMPARE_OP_LESS;
 
-	// 7. Multisampling
+	// 8. Multisampling
 
 	VkPipelineMultisampleStateCreateInfo sampleInfo{};
 	sampleInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 	sampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
-	// 8. Color blending
+	// 9. Color blending
 
 	VkPipelineColorBlendAttachmentState colorAttachment{};
 	colorAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
@@ -128,7 +222,7 @@ bool initialize() {
 	blendInfo.attachmentCount = 1;
 	blendInfo.pAttachments = &colorAttachment;
 
-	// 9. Scissor and viewport - part 2: dynamic states
+	// 10. Scissor and viewport - part 2: dynamic states
 
 	const VkDynamicState dynamicStates[] = {
 		VK_DYNAMIC_STATE_VIEWPORT,
@@ -140,7 +234,7 @@ bool initialize() {
 	dynamicInfo.dynamicStateCount = sizeof(dynamicStates) / sizeof(dynamicStates[0]);
 	dynamicInfo.pDynamicStates = dynamicStates;
 
-	// 10. Pipeline info
+	// 11. Pipeline info
 
 	VkGraphicsPipelineCreateInfo pipelineInfo{};
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -161,7 +255,7 @@ bool initialize() {
 	pipelineInfo.renderPass = graphics::internal::context.render_pass;
 	pipelineInfo.subpass = 0;
 
-	// 11. The pipeline
+	// 12. The pipeline
 
 	if (vkCreateGraphicsPipelines(graphics::internal::context.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS)
 	{
