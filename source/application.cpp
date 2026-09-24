@@ -8,6 +8,7 @@
 #include <numbers>
 #include <string>
 #include <cstring>
+#include <cstddef>
 
 namespace application {
 
@@ -30,6 +31,10 @@ VkPipeline graphicsPipeline = VK_NULL_HANDLE;
 VkBuffer vertexBuffer = VK_NULL_HANDLE;
 VmaAllocation vertexBufferAllocation = nullptr;
 Vertex* vertexBufferMemory = nullptr;
+
+VkBuffer indexBuffer = VK_NULL_HANDLE;
+VmaAllocation indexBufferAllocation = nullptr;
+uint32_t* indexBufferMemory = nullptr;
 
 VkShaderModule loadShaderModule(const char path[]) {
 	std::ifstream file(path, std::ios::binary | std::ios::ate);
@@ -120,13 +125,14 @@ void generateCylinderGeometry() {
 
 bool initialize() {
 
-	// 0. Cylinder
+	// Cylinder
 
 	generateCylinderGeometry();
 
-	// 1. Vertex Buffer
+	// Vertex Buffer
 
 	auto& context = graphics::internal::context;
+
 	const size_t vertexDataSize = cylinderVertices.size() * sizeof(Vertex);
 
 	VkBufferCreateInfo vertexBufferInfo{
@@ -148,7 +154,7 @@ bool initialize() {
 		return false;
 	}
 
-	if (vmaMapMemory(context.allocator, vertexBufferAllocation, reinterpret_cast<void**>(vertexBufferMemory)) != VK_SUCCESS)
+	if (vmaMapMemory(context.allocator, vertexBufferAllocation, reinterpret_cast<void**>(&vertexBufferMemory)) != VK_SUCCESS)
 	{
 		std::cerr << "Не удалось отобразить vertex buffer память.\n";
 		return false;
@@ -156,7 +162,44 @@ bool initialize() {
 
 	memcpy(vertexBufferMemory, cylinderVertices.data(), vertexDataSize);
 
-	// 2. Pipeline layout creation
+	vmaUnmapMemory(context.allocator, vertexBufferAllocation);
+	vertexBufferMemory = nullptr;
+
+	// Index Buffer
+
+	const size_t indexDataSize = cylinderIndices.size() * sizeof(uint32_t);
+
+	VkBufferCreateInfo indexBufferInfo{
+		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+		.size = indexDataSize,
+		.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+	};
+
+	VmaAllocationCreateInfo indexAllocationInfo{
+		.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT |
+			VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+		.usage = VMA_MEMORY_USAGE_AUTO,
+	};
+
+	if (vmaCreateBuffer(context.allocator, &indexBufferInfo, &indexAllocationInfo, &indexBuffer, &indexBufferAllocation, nullptr) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось создать index buffer.\n";
+		return false;
+	}
+
+	if (vmaMapMemory(context.allocator, indexBufferAllocation, reinterpret_cast<void**>(&indexBufferMemory)) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось отобразить index buffer память.\n";
+		return false;
+	}
+
+	memcpy(indexBufferMemory, cylinderIndices.data(), indexDataSize);
+
+	vmaUnmapMemory(context.allocator, indexBufferAllocation);
+	indexBufferMemory = nullptr;
+
+	// Pipeline layout creation
 
 	VkPipelineLayoutCreateInfo layoutInfo{};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -167,7 +210,7 @@ bool initialize() {
 		return false;
 	}
 	
-	// 3. Using shaders...
+	// Using shaders...
 
 	vertexShader = loadShaderModule("shaders/basic.vert.spv");
 	fragmentShader = loadShaderModule("shaders/basic.frag.spv");
@@ -190,23 +233,50 @@ bool initialize() {
 	shaderStages[1].module = fragmentShader;
 	shaderStages[1].pName = "main";
 
-	// 4. Vector Input / Input Assembly
+	// Vector Input / Input Assembly
+
+	VkVertexInputBindingDescription vertexBinding{
+		.binding = 0,
+		.stride = sizeof(Vertex),
+		.inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+	};
+
+	VkVertexInputAttributeDescription vertexAttributes[2]{
+		{
+			.location = 0,
+			.binding = 0,
+			.format = VK_FORMAT_R32G32B32_SFLOAT,
+			.offset = offsetof(Vertex, position),
+		},
+		{
+			.location = 1,
+			.binding = 0,
+			.format = VK_FORMAT_R32G32B32_SFLOAT,
+			.offset = offsetof(Vertex, color),
+		},
+	};
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+	
+	vertexInputInfo.vertexBindingDescriptionCount = 1;
+	vertexInputInfo.pVertexBindingDescriptions = &vertexBinding;
+
+	vertexInputInfo.vertexAttributeDescriptionCount = 2;
+	vertexInputInfo.pVertexAttributeDescriptions = vertexAttributes;
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo{};
 	inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 	inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
-	// 5. Scissor / Viewport
+	// Scissor / Viewport
 
 	VkPipelineViewportStateCreateInfo viewportInfo{};
 	viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 	viewportInfo.viewportCount = 1;
 	viewportInfo.scissorCount = 1;
 
-	// 6. Rasterization
+	// Rasterization
 
 	VkPipelineRasterizationStateCreateInfo rasterInfo{};
 	rasterInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
@@ -215,7 +285,7 @@ bool initialize() {
 	rasterInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
 	rasterInfo.lineWidth = 1.0f;
 
-	// 7. Depth test
+	// Depth test
 
 	VkPipelineDepthStencilStateCreateInfo depthInfo{};
 	depthInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -223,13 +293,13 @@ bool initialize() {
 	depthInfo.depthWriteEnable = VK_TRUE;
 	depthInfo.depthCompareOp = VK_COMPARE_OP_LESS;
 
-	// 8. Multisampling
+	// Multisampling
 
 	VkPipelineMultisampleStateCreateInfo sampleInfo{};
 	sampleInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 	sampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
-	// 9. Color blending
+	// Color blending
 
 	VkPipelineColorBlendAttachmentState colorAttachment{};
 	colorAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
@@ -243,7 +313,7 @@ bool initialize() {
 	blendInfo.attachmentCount = 1;
 	blendInfo.pAttachments = &colorAttachment;
 
-	// 10. Scissor and viewport - part 2: dynamic states
+	// Scissor and viewport - part 2: dynamic states
 
 	const VkDynamicState dynamicStates[] = {
 		VK_DYNAMIC_STATE_VIEWPORT,
@@ -255,7 +325,7 @@ bool initialize() {
 	dynamicInfo.dynamicStateCount = sizeof(dynamicStates) / sizeof(dynamicStates[0]);
 	dynamicInfo.pDynamicStates = dynamicStates;
 
-	// 11. Pipeline info
+	// Pipeline info
 
 	VkGraphicsPipelineCreateInfo pipelineInfo{};
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -276,7 +346,7 @@ bool initialize() {
 	pipelineInfo.renderPass = graphics::internal::context.render_pass;
 	pipelineInfo.subpass = 0;
 
-	// 12. The pipeline
+	// The pipeline
 
 	if (vkCreateGraphicsPipelines(graphics::internal::context.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS)
 	{
@@ -291,6 +361,7 @@ void shutdown() {
 	auto& context = graphics::internal::context;
 	vkQueueWaitIdle(context.graphics_queue);
 
+	vmaDestroyBuffer(context.allocator, indexBuffer, indexBufferAllocation);
 	vmaDestroyBuffer(context.allocator, vertexBuffer, vertexBufferAllocation);
 
 	vkDestroyPipeline(context.device, graphicsPipeline, nullptr);
@@ -349,9 +420,17 @@ void render(const graphics::internal::FrameData& fd) {
 
 	vkCmdBindPipeline(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
-	vkCmdDraw(fd.command_buffer, 3, 1, 0, 0);
+	VkDeviceSize vertexBufferOffset = 0;
+
+	vkCmdBindVertexBuffers(fd.command_buffer, 0, 1, &vertexBuffer, &vertexBufferOffset);
+	vkCmdBindIndexBuffer(fd.command_buffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+	vkCmdDrawIndexed(fd.command_buffer, static_cast<uint32_t>(cylinderIndices.size()), 1, 0, 0, 0);
 
 	vkCmdEndRenderPass(fd.command_buffer);
 	vkEndCommandBuffer(fd.command_buffer);
 }
 }
+
+// 1: Привет, ИИ.
+// 2: 
