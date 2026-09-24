@@ -7,12 +7,9 @@
 #include <cmath>
 #include <numbers>
 #include <string>
+#include <cstring>
 
 namespace application {
-
-VkBuffer vertexBuffer = VK_NULL_HANDLE;
-VmaAllocation vertexBufferAllocation = nullptr;
-Vertex* vertexBufferMemory = nullptr;
 
 struct Vertex {
 	float position[3];
@@ -29,6 +26,10 @@ VkShaderModule vertexShader = VK_NULL_HANDLE;
 VkShaderModule fragmentShader = VK_NULL_HANDLE;
 
 VkPipeline graphicsPipeline = VK_NULL_HANDLE;
+
+VkBuffer vertexBuffer = VK_NULL_HANDLE;
+VmaAllocation vertexBufferAllocation = nullptr;
+Vertex* vertexBufferMemory = nullptr;
 
 VkShaderModule loadShaderModule(const char path[]) {
 	std::ifstream file(path, std::ios::binary | std::ios::ate);
@@ -119,21 +120,41 @@ void generateCylinderGeometry() {
 
 bool initialize() {
 
-	// 1. Cylinder...
+	// 0. Cylinder
 
 	generateCylinderGeometry();
 
-	// auto& context = graphics::internal::context;
-	// const size_t vertexDataSize = cylinderVertices.size() * sizeof(Vertex);
+	// 1. Vertex Buffer
 
-	// VkBufferCreateInfo vertexBufferInfo{
-	// 	.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-	// 	.size = vertexDataSize,
-	// 	.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-	// 	.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-	// };
+	auto& context = graphics::internal::context;
+	const size_t vertexDataSize = cylinderVertices.size() * sizeof(Vertex);
 
+	VkBufferCreateInfo vertexBufferInfo{
+		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+		.size = vertexDataSize,
+		.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+	};
 
+	VmaAllocationCreateInfo vertexAllocationInfo{
+		.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT |
+			VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+		.usage = VMA_MEMORY_USAGE_AUTO,
+	};
+
+	if (vmaCreateBuffer(context.allocator, &vertexBufferInfo, &vertexAllocationInfo, &vertexBuffer, &vertexBufferAllocation, nullptr) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось создать vertex buffer.\n";
+		return false;
+	}
+
+	if (vmaMapMemory(context.allocator, vertexBufferAllocation, reinterpret_cast<void**>(vertexBufferMemory)) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось отобразить vertex buffer память.\n";
+		return false;
+	}
+
+	memcpy(vertexBufferMemory, cylinderVertices.data(), vertexDataSize);
 
 	// 2. Pipeline layout creation
 
@@ -263,14 +284,14 @@ bool initialize() {
 		return false;
 	}
 
-	
-
 	return true;
 }
 
 void shutdown() {
 	auto& context = graphics::internal::context;
 	vkQueueWaitIdle(context.graphics_queue);
+
+	vmaDestroyBuffer(context.allocator, vertexBuffer, vertexBufferAllocation);
 
 	vkDestroyPipeline(context.device, graphicsPipeline, nullptr);
 	vkDestroyPipelineLayout(context.device, pipelineLayout, nullptr);
