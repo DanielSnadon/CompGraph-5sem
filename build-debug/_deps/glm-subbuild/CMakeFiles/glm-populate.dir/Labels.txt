@@ -1,0 +1,14 @@
+# Target labels
+ glm-populate
+# Source files and their labels
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-subbuild/CMakeFiles/glm-populate
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-subbuild/CMakeFiles/glm-populate.rule
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-subbuild/CMakeFiles/glm-populate-complete.rule
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-subbuild/glm-populate-prefix/src/glm-populate-stamp/glm-populate-build.rule
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-subbuild/glm-populate-prefix/src/glm-populate-stamp/glm-populate-configure.rule
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-subbuild/glm-populate-prefix/src/glm-populate-stamp/glm-populate-download.rule
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-subbuild/glm-populate-prefix/src/glm-populate-stamp/glm-populate-install.rule
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-subbuild/glm-populate-prefix/src/glm-populate-stamp/glm-populate-mkdir.rule
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-subbuild/glm-populate-prefix/src/glm-populate-stamp/glm-populate-patch.rule
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-subbuild/glm-populate-prefix/src/glm-populate-stamp/glm-populate-test.rule
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-subbuild/glm-populate-prefix/src/glm-populate-stamp/glm-populate-update.rule

@@ -1123,7 +1123,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "5"
+			"value" : "7"
 		},
 		{
 			"name" : "CMAKE_OBJCOPY",
@@ -1634,6 +1634,18 @@
 			"value" : ""
 		},
 		{
+			"name" : "FETCHCONTENT_SOURCE_DIR_GLM",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "When not empty, overrides where to find pre-populated content for glm"
+				}
+			],
+			"type" : "PATH",
+			"value" : ""
+		},
+		{
 			"name" : "FETCHCONTENT_SOURCE_DIR_IMGUI",
 			"properties" : 
 			[
@@ -1688,6 +1700,18 @@
 				{
 					"name" : "HELPSTRING",
 					"value" : "Enables UPDATE_DISCONNECTED behavior just for population of glfw"
+				}
+			],
+			"type" : "BOOL",
+			"value" : "OFF"
+		},
+		{
+			"name" : "FETCHCONTENT_UPDATES_DISCONNECTED_GLM",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Enables UPDATE_DISCONNECTED behavior just for population of glm"
 				}
 			],
 			"type" : "BOOL",
@@ -1900,6 +1924,234 @@
 			],
 			"type" : "STATIC",
 			"value" : "/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-src"
+		},
+		{
+			"name" : "GLM_BUILD_INSTALL",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Generate the install target"
+				}
+			],
+			"type" : "BOOL",
+			"value" : "OFF"
+		},
+		{
+			"name" : "GLM_BUILD_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Build dynamic/static library"
+				}
+			],
+			"type" : "BOOL",
+			"value" : "ON"
+		},
+		{
+			"name" : "GLM_BUILD_TESTS",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Build the test programs"
+				}
+			],
+			"type" : "BOOL",
+			"value" : "OFF"
+		},
+		{
+			"name" : "GLM_DISABLE_AUTO_DETECTION",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Disable platform, compiler, arch and C++ language detection"
+				}
+			],
+			"type" : "BOOL",
+			"value" : "OFF"
+		},
+		{
+			"name" : "GLM_ENABLE_CXX_11",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Enable C++ 11"
+				}
+			],
+			"type" : "BOOL",
+			"value" : "OFF"
+		},
+		{
+			"name" : "GLM_ENABLE_CXX_14",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Enable C++ 14"
+				}
+			],
+			"type" : "BOOL",
+			"value" : "OFF"
+		},
+		{
+			"name" : "GLM_ENABLE_CXX_17",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Enable C++ 17"
+				}
+			],
+			"type" : "BOOL",
+			"value" : "OFF"
+		},
+		{
+			"name" : "GLM_ENABLE_CXX_20",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Enable C++ 20"
+				}
+			],
+			"type" : "BOOL",
+			"value" : "OFF"
+		},
+		{
+			"name" : "GLM_ENABLE_CXX_98",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Enable C++ 98"
+				}
+			],
+			"type" : "BOOL",
+			"value" : "OFF"
+		},
+		{
+			"name" : "GLM_ENABLE_FAST_MATH",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Enable fast math optimizations"
+				}
+			],
+			"type" : "BOOL",
+			"value" : "OFF"
+		},
+		{
+			"name" : "GLM_ENABLE_LANG_EXTENSIONS",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Enable language extensions"
+				}
+			],
+			"type" : "BOOL",
+			"value" : "OFF"
+		},
+		{
+			"name" : "GLM_ENABLE_SIMD_AVX",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Enable AVX optimizations"
+				}
+			],
+			"type" : "BOOL",
+			"value" : "OFF"
+		},
+		{
+			"name" : "GLM_ENABLE_SIMD_AVX2",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Enable AVX2 optimizations"
+				}
+			],
+			"type" : "BOOL",
+			"value" : "OFF"
+		},
+		{
+			"name" : "GLM_ENABLE_SIMD_SSE2",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Enable SSE2 optimizations"
+				}
+			],
+			"type" : "BOOL",
+			"value" : "OFF"
+		},
+		{
+			"name" : "GLM_ENABLE_SIMD_SSE3",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Enable SSE3 optimizations"
+				}
+			],
+			"type" : "BOOL",
+			"value" : "OFF"
+		},
+		{
+			"name" : "GLM_ENABLE_SIMD_SSE4_1",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Enable SSE 4.1 optimizations"
+				}
+			],
+			"type" : "BOOL",
+			"value" : "OFF"
+		},
+		{
+			"name" : "GLM_ENABLE_SIMD_SSE4_2",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Enable SSE 4.2 optimizations"
+				}
+			],
+			"type" : "BOOL",
+			"value" : "OFF"
+		},
+		{
+			"name" : "GLM_ENABLE_SIMD_SSSE3",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Enable SSSE3 optimizations"
+				}
+			],
+			"type" : "BOOL",
+			"value" : "OFF"
+		},
+		{
+			"name" : "GLM_FORCE_PURE",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Force 'pure' instructions"
+				}
+			],
+			"type" : "BOOL",
+			"value" : "OFF"
 		},
 		{
 			"name" : "GLSLC_FOUND",
@@ -5072,6 +5324,42 @@
 			],
 			"type" : "INTERNAL",
 			"value" : "1"
+		},
+		{
+			"name" : "glm_BINARY_DIR",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Value Computed by CMake"
+				}
+			],
+			"type" : "STATIC",
+			"value" : "/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-build"
+		},
+		{
+			"name" : "glm_IS_TOP_LEVEL",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Value Computed by CMake"
+				}
+			],
+			"type" : "STATIC",
+			"value" : "OFF"
+		},
+		{
+			"name" : "glm_SOURCE_DIR",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Value Computed by CMake"
+				}
+			],
+			"type" : "STATIC",
+			"value" : "/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-src"
 		},
 		{
 			"name" : "pkgcfg_lib_Wayland_m",

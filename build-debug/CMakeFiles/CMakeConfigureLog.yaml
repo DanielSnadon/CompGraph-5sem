@@ -19191,3 +19191,209 @@ events:
         - "/usr/pkg"
         - "/opt"
 ...
+
+---
+events:
+  -
+    kind: "find_package-v1"
+    backtrace:
+      - "CMakeLists.txt:47 (find_package)"
+    name: "glm"
+    configs:
+      -
+        filename: "glm.cps"
+        kind: "cps"
+      -
+        filename: "glmConfig.cmake"
+        kind: "cmake"
+      -
+        filename: "glm-config.cmake"
+        kind: "cmake"
+    version_request:
+      exact: false
+    settings:
+      required: "required_explicit"
+      quiet: false
+      global: false
+      policy_scope: true
+      bypass_provider: false
+      names:
+        - "glm"
+      path_suffixes:
+        - ""
+      paths:
+        CMAKE_FIND_USE_CMAKE_PATH: true
+        CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+        CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+        CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+        CMAKE_FIND_USE_INSTALL_PREFIX: true
+        CMAKE_FIND_USE_PACKAGE_ROOT_PATH: true
+        CMAKE_FIND_USE_CMAKE_PACKAGE_REGISTRY: true
+        CMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY: true
+        CMAKE_FIND_ROOT_PATH_MODE: "BOTH"
+    candidates:
+      -
+        path: "/home/snadon/ComputerGraphics-5sem/build-debug/CMakeFiles/pkgRedirects/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/snadon/ComputerGraphics-5sem/build-debug/CMakeFiles/pkgRedirects/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/snadon/ComputerGraphics-5sem/build-debug/CMakeFiles/pkgRedirects/lib64/cps/glm.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/snadon/ComputerGraphics-5sem/build-debug/CMakeFiles/pkgRedirects/lib/cps/glm.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/snadon/ComputerGraphics-5sem/build-debug/CMakeFiles/pkgRedirects/share/cps/glm.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/snadon/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/snadon/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/snadon/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/lib64/cps/glm.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/snadon/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/lib/cps/glm.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/snadon/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/share/cps/glm.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/snadon/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/snadon/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/snadon/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/lib64/cps/glm.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/snadon/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/lib/cps/glm.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/snadon/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/share/cps/glm.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/snadon/.local/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/snadon/.local/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/snadon/.local/lib64/cps/glm.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/snadon/.local/lib/cps/glm.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/snadon/.local/share/cps/glm.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/snadon/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/snadon/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/snadon/lib64/cps/glm.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/snadon/lib/cps/glm.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/snadon/share/cps/glm.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/local/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/usr/local/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/usr/local/lib64/cps/glm.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/local/lib/cps/glm.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/local/share/cps/glm.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/usr/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/usr/lib64/cps/glm.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/lib/cps/glm.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/share/cps/glm.cps"
+        mode: "cps"
+        reason: "no_exist"
+    found:
+      path: "/usr/share/cmake/glm/glmConfig.cmake"
+      mode: "config"
+      version: "1.0.1"
+    search_context:
+      ENV{PATH}:
+        - "/home/snadon/.config/Code/User/globalStorage/github.copilot-chat/debugCommand"
+        - "/home/snadon/.config/Code/User/globalStorage/github.copilot-chat/copilotCli"
+        - "/home/snadon/.local/bin"
+        - "/home/snadon/bin"
+        - "/usr/local/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/var/lib/snapd/snap/bin"
+      CMAKE_INSTALL_PREFIX: "/usr/local"
+      CMAKE_SYSTEM_PREFIX_PATH:
+        - "/usr/local"
+        - "/usr"
+        - "/"
+        - "/usr"
+        - "/usr/local"
+        - "/usr/X11R6"
+        - "/usr/pkg"
+        - "/opt"
+...

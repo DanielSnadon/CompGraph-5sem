@@ -44,6 +44,7 @@ FetchContent_Declare(
 )
 
 find_package(Vulkan REQUIRED)
+find_package(glm CONFIG REQUIRED)
 
 set(GLFW_LIBRARY_TYPE STATIC)
 set(GLFW_BUILD_EXAMPLES OFF)
@@ -62,6 +63,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 	Vulkan::Vulkan
 	vk-bootstrap::vk-bootstrap
 	GPUOpen::VulkanMemoryAllocator
+	glm::glm
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends)

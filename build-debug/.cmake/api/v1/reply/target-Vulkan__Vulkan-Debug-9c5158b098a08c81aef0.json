@@ -1,17 +1,11 @@
 {
 	"abstract" : true,
-	"artifacts" : 
-	[
-		{
-			"path" : "/usr/bin/glslc"
-		}
-	],
 	"backtrace" : 3,
 	"backtraceGraph" : 
 	{
 		"commands" : 
 		[
-			"add_executable",
+			"add_library",
 			"find_package"
 		],
 		"files" : 
@@ -27,7 +21,7 @@
 			{
 				"command" : 1,
 				"file" : 1,
-				"line" : 46,
+				"line" : 52,
 				"parent" : 0
 			},
 			{
@@ -37,7 +31,7 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 734,
+				"line" : 721,
 				"parent" : 2
 			}
 		]
@@ -47,16 +41,15 @@
 		"major" : 2,
 		"minor" : 10
 	},
-	"id" : "Vulkan::glslc::@6890427a1f51a3e7e1df",
+	"id" : "Vulkan::Vulkan::@6890427a1f51a3e7e1df",
 	"imported" : true,
 	"local" : true,
-	"name" : "Vulkan::glslc",
-	"nameOnDisk" : "glslc",
+	"name" : "Vulkan::Vulkan",
 	"paths" : 
 	{
 		"build" : ".",
 		"source" : "."
 	},
 	"sources" : [],
-	"type" : "EXECUTABLE"
+	"type" : "UNKNOWN_LIBRARY"
 }

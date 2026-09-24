@@ -34,3 +34,16 @@
 /home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-build/CMakeFiles/install.dir
 /home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-build/CMakeFiles/install/local.dir
 /home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-build/CMakeFiles/install/strip.dir
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-build/CMakeFiles/edit_cache.dir
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-build/CMakeFiles/rebuild_cache.dir
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-build/CMakeFiles/list_install_components.dir
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-build/CMakeFiles/install.dir
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-build/CMakeFiles/install/local.dir
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-build/CMakeFiles/install/strip.dir
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-build/glm/CMakeFiles/glm.dir
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-build/glm/CMakeFiles/edit_cache.dir
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-build/glm/CMakeFiles/rebuild_cache.dir
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-build/glm/CMakeFiles/list_install_components.dir
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-build/glm/CMakeFiles/install.dir
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-build/glm/CMakeFiles/install/local.dir
+/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-build/glm/CMakeFiles/install/strip.dir

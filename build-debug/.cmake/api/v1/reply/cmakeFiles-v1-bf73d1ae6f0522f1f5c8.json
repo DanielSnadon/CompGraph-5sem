@@ -297,6 +297,26 @@
 			"path" : "/usr/share/cmake/Modules/FetchContent/CMakeLists.cmake.in"
 		},
 		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/usr/share/cmake/Modules/FindGit.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/usr/share/cmake/Modules/FindPackageHandleStandardArgs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/usr/share/cmake/Modules/FindPackageMessage.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/usr/share/cmake/Modules/FetchContent/CMakeLists.cmake.in"
+		},
+		{
 			"isGenerated" : true,
 			"path" : "build-debug/_deps/glfw-src/CMakeLists.txt"
 		},
@@ -437,6 +457,19 @@
 		{
 			"isGenerated" : true,
 			"path" : "build-debug/_deps/vulkanmemoryallocator-src/CMakeLists.txt"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "build-debug/_deps/glm-src/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/usr/share/cmake/Modules/GNUInstallDirs.cmake"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "build-debug/_deps/glm-src/glm/CMakeLists.txt"
 		}
 	],
 	"kind" : "cmakeFiles",

@@ -10,18 +10,37 @@
 #include <cstring>
 #include <cstddef>
 
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 namespace application {
 
 struct Vertex {
 	float position[3];
 	float color[3];
 };
+
+struct UniformBufferObject {
+	alignas(16) glm::mat4 model{1.0f};
+	alignas(16) glm::mat4 view{1.0f};
+	alignas(16) glm::mat4 projection{1.0f};
+};
+
+// Координаты модели ------> Мировые координаты ------> Координаты относительно камеры ------> Координаты экрана
+//                   modelMatrix              viewMatrix                        projectionMatrix
+
 std::vector<Vertex> cylinderVertices;
 std::vector<uint32_t> cylinderIndices;
 
 constexpr uint32_t cylinderSegments = 50;
 
 VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
+VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
+VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
+VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 
 VkShaderModule vertexShader = VK_NULL_HANDLE;
 VkShaderModule fragmentShader = VK_NULL_HANDLE;
@@ -35,6 +54,10 @@ Vertex* vertexBufferMemory = nullptr;
 VkBuffer indexBuffer = VK_NULL_HANDLE;
 VmaAllocation indexBufferAllocation = nullptr;
 uint32_t* indexBufferMemory = nullptr;
+
+VkBuffer uniformBuffer = VK_NULL_HANDLE;
+VmaAllocation uniformBufferAllocation = nullptr;
+UniformBufferObject* uniformBufferMemory = nullptr;
 
 VkShaderModule loadShaderModule(const char path[]) {
 	std::ifstream file(path, std::ios::binary | std::ios::ate);
@@ -198,11 +221,117 @@ bool initialize() {
 
 	vmaUnmapMemory(context.allocator, indexBufferAllocation);
 	indexBufferMemory = nullptr;
+	
+	// Uniform Buffer
 
-	// Pipeline layout creation
+	VkBufferCreateInfo uniformBufferInfo{
+		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+		.size = sizeof(UniformBufferObject),
+		.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+	};
+
+	VmaAllocationCreateInfo uniformAllocationInfo{
+		.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+		.usage = VMA_MEMORY_USAGE_AUTO,
+	};
+
+	if (vmaCreateBuffer(context.allocator, &uniformBufferInfo, &uniformAllocationInfo, &uniformBuffer, &uniformBufferAllocation, nullptr) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось создать uniform buffer.\n";
+		return false;
+	}
+
+	if (vmaMapMemory(context.allocator, uniformBufferAllocation, reinterpret_cast<void**>(&uniformBufferMemory)) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось отобразить uniform buffer память.\n";
+		return false;
+	}
+
+	*uniformBufferMemory = UniformBufferObject{};
+	vmaFlushAllocation(context.allocator, uniformBufferAllocation, 0, sizeof(UniformBufferObject));
+
+	// Descriptor layout
+
+	VkDescriptorSetLayoutBinding uniformLayoutBinding{
+		.binding = 0,
+		.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+		.descriptorCount = 1,
+		.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+		.pImmutableSamplers = nullptr,
+	};
+
+	VkDescriptorSetLayoutCreateInfo descriptorLayoutInfo{
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+		.bindingCount = 1,
+		.pBindings = &uniformLayoutBinding,
+	};
+
+	if (vkCreateDescriptorSetLayout(context.device, &descriptorLayoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось созать descriptor set layout.\n";
+		return false;
+	}
+
+	// Descriptor pool
+
+	VkDescriptorPoolSize VkDescriptorPoolSize{
+		.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+		.descriptorCount = 1,
+	};
+	
+	VkDescriptorPoolCreateInfo descriptorPoolInfo{
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+		.maxSets = 1,
+		.poolSizeCount = 1,
+		.pPoolSizes = &VkDescriptorPoolSize,
+	};
+
+	if (vkCreateDescriptorPool(context.device, &descriptorPoolInfo, nullptr, &descriptorPool) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось создать descriptor pool.\n";
+		return false;
+	}
+
+	// Descriptor set
+
+	VkDescriptorSetAllocateInfo descriptorSetAllocateInfo{
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+		.descriptorPool = descriptorPool,
+		.descriptorSetCount = 1,
+		.pSetLayouts = &descriptorSetLayout,
+	};
+	
+	if (vkAllocateDescriptorSets(context.device, &descriptorSetAllocateInfo, &descriptorSet) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось выделить descriptor set.\n";
+		return false;
+	}
+
+	VkDescriptorBufferInfo uniformDescriptorInfo{
+		.buffer = uniformBuffer,
+		.offset = 0,
+		.range = sizeof(UniformBufferObject),
+	};
+
+	VkWriteDescriptorSet descriptorWrite{
+		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+		.dstSet = descriptorSet,
+		.dstBinding = 0,
+		.dstArrayElement = 0,
+		.descriptorCount = 1,
+		.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+		.pBufferInfo = &uniformDescriptorInfo,
+	};
+
+	vkUpdateDescriptorSets(context.device, 1, &descriptorWrite, 0, nullptr);
+
+	// Pipeline layout
 
 	VkPipelineLayoutCreateInfo layoutInfo{};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	layoutInfo.setLayoutCount = 1;
+	layoutInfo.pSetLayouts = &descriptorSetLayout;
 
 	if (vkCreatePipelineLayout(graphics::internal::context.device, &layoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
 	{
@@ -361,11 +490,16 @@ void shutdown() {
 	auto& context = graphics::internal::context;
 	vkQueueWaitIdle(context.graphics_queue);
 
+	vkDestroyDescriptorPool(context.device, descriptorPool, nullptr);
+	descriptorSet = VK_NULL_HANDLE;
+
 	vmaDestroyBuffer(context.allocator, indexBuffer, indexBufferAllocation);
 	vmaDestroyBuffer(context.allocator, vertexBuffer, vertexBufferAllocation);
 
 	vkDestroyPipeline(context.device, graphicsPipeline, nullptr);
 	vkDestroyPipelineLayout(context.device, pipelineLayout, nullptr);
+
+	vkDestroyDescriptorSetLayout(context.device, descriptorSetLayout, nullptr);
 
 	vkDestroyShaderModule(context.device, vertexShader, nullptr);
 	vkDestroyShaderModule(context.device, fragmentShader, nullptr);
@@ -431,6 +565,3 @@ void render(const graphics::internal::FrameData& fd) {
 	vkEndCommandBuffer(fd.command_buffer);
 }
 }
-
-// 1: Привет, ИИ.
-// 2: 
