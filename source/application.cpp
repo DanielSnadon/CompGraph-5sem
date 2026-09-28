@@ -18,6 +18,8 @@
 
 namespace application {
 
+int usePerspectiveProjection = 1;
+
 struct Vertex {
 	float position[3];
 	float color[3];
@@ -94,7 +96,7 @@ void generateCylinderGeometry() {
 	cylinderIndices.reserve(cylinderSegments * 12);
 
 	constexpr float radius = 0.5f;
-	constexpr float height = 0.5f;
+	constexpr float height = 0.7f;
 
 	for (uint32_t i = 0; i < cylinderSegments; ++i)
 	{
@@ -104,23 +106,23 @@ void generateCylinderGeometry() {
 
 		cylinderVertices.push_back({
 			.position = {x, -height, z},
-			.color = {0.2f, 0.6f, 1.0f},
+			.color = {0.9f, 0.9f, 0.9f},
 		});
 
 		cylinderVertices.push_back({
 			.position = {x, height, z},
-			.color = {1.0f, 0.4f, 0.2f},
+			.color = {0.2f, 0.4f, 1.0f},
 		});
 	}
 
 	cylinderVertices.push_back({
 		.position = {0.0f, -height, 0.0f},
-		.color = {0.2f, 0.6f, 1.0f},
+		.color = {0.9f, 0.9f, 0.9f},
 	});
 
 	cylinderVertices.push_back({
 		.position = {0.0f, height, 0.0f},
-		.color = {1.0f, 0.4f, 0.2f},
+		.color = {0.2f, 0.4f, 1.0f},
 	});
 
 	const uint32_t bottomCenter = cylinderSegments * 2;
@@ -248,7 +250,28 @@ bool initialize() {
 		return false;
 	}
 
-	*uniformBufferMemory = UniformBufferObject{};
+	// Matrix calculations
+	// *uniformBufferMemory = UniformBufferObject{}; <- starting form
+
+	uniformBufferMemory->model = glm::rotate( // Cylinder
+		glm::mat4(1.0f),
+		glm::radians(25.0f),
+		glm::vec3(1.0f, 0.0f, 0.0f)
+	);
+
+	uniformBufferMemory->view = glm::lookAt( // Camera
+		glm::vec3(2.0f, 1.8f, 2.5f),
+		glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(0.0f, 1.0f, 0.0f)
+	);
+
+	uniformBufferMemory->projection = glm::perspective( // Projection
+		glm::radians(45.0f),
+		static_cast<float>(context.swapchain_extent.width) / static_cast<float>(context.swapchain_extent.height), 0.1f, 10.0f
+	);
+
+	uniformBufferMemory->projection[1][1] *= -1.0f;
+
 	vmaFlushAllocation(context.allocator, uniformBufferAllocation, 0, sizeof(UniformBufferObject));
 
 	// Descriptor layout
@@ -493,6 +516,10 @@ void shutdown() {
 	vkDestroyDescriptorPool(context.device, descriptorPool, nullptr);
 	descriptorSet = VK_NULL_HANDLE;
 
+	vmaUnmapMemory(context.allocator, uniformBufferAllocation);
+	uniformBufferMemory = nullptr;
+
+	vmaDestroyBuffer(context.allocator, uniformBuffer, uniformBufferAllocation);
 	vmaDestroyBuffer(context.allocator, indexBuffer, indexBufferAllocation);
 	vmaDestroyBuffer(context.allocator, vertexBuffer, vertexBufferAllocation);
 
@@ -506,14 +533,61 @@ void shutdown() {
 }
 
 void update([[maybe_unused]] double time) {
-	ImGui::ShowDemoWindow();
+	ImGui::Begin("Settings");
+	ImGui::RadioButton("Perspective", &usePerspectiveProjection, 1);
+	ImGui::SameLine();
+	ImGui::RadioButton("Orthographic", &usePerspectiveProjection, 0);
+	ImGui::End();
 }
 
 void render(const graphics::internal::FrameData& fd) {
-	
-	// I. Clearance and fill with dark color.
 
 	auto& context = graphics::internal::context;
+
+	// I. View
+
+	const float aspect = static_cast<float>(context.swapchain_extent.width) / static_cast<float>(context.swapchain_extent.height);
+
+	uniformBufferMemory->model = glm::rotate(
+		glm::mat4(1.0f),
+		glm::radians(25.0f),
+		glm::vec3(1.0f, 0.0f, 0.0f)
+	);
+
+	uniformBufferMemory->view = glm::lookAt(
+		glm::vec3(2.0f, 1.8f, 2.5f),
+		glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(0.0f, 1.0f, 0.0f)
+	);
+
+	if (usePerspectiveProjection)
+	{
+		uniformBufferMemory->projection = glm::perspective(
+			glm::radians(45.0f),
+			aspect,
+			0.1f,
+			10.0f
+		);
+	}
+	else {
+		const float halfHeight = 0.9f;
+		const float halfWidth = halfHeight * aspect;
+
+		uniformBufferMemory->projection = glm::ortho(
+			-halfWidth,
+			halfWidth,
+			-halfHeight,
+			halfHeight,
+			0.1f,
+			10.0f
+		);
+	}
+
+	uniformBufferMemory->projection[1][1] *= -1.0f;
+
+	vmaFlushAllocation(context.allocator, uniformBufferAllocation, 0, sizeof(UniformBufferObject));
+
+	// II. Clearance and fill with dark color.
 
 	vkResetCommandBuffer(fd.command_buffer, 0);
 
@@ -534,7 +608,7 @@ void render(const graphics::internal::FrameData& fd) {
 	renderPassInfo.clearValueCount = 2;
 	renderPassInfo.pClearValues = clearValues;
 
-	// II. Main.
+	// III. Main.
 
 	vkCmdBeginRenderPass(fd.command_buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
