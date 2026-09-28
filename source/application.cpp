@@ -15,10 +15,14 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 namespace application {
 
-int usePerspectiveProjection = 1;
+glm::vec3 objectPosition{0.0f, 0.0f, 0.0f};
+glm::vec3 objectRotationDegrees{25.0f, 0.0f, 0.0f};
+glm::vec3 objectScale{1.0f, 1.0f, 1.0f};
+int perspectiveProjection = 1;
 
 struct Vertex {
 	float position[3];
@@ -534,9 +538,14 @@ void shutdown() {
 
 void update([[maybe_unused]] double time) {
 	ImGui::Begin("Settings");
-	ImGui::RadioButton("Perspective", &usePerspectiveProjection, 1);
+	ImGui::RadioButton("Perspective", &perspectiveProjection, 1);
 	ImGui::SameLine();
-	ImGui::RadioButton("Orthographic", &usePerspectiveProjection, 0);
+	ImGui::RadioButton("Orthographic", &perspectiveProjection, 0);
+
+	ImGui::SliderFloat3("Position", glm::value_ptr(objectPosition), -2.0f, 2.0f);
+	ImGui::SliderFloat3("Rotation", glm::value_ptr(objectRotationDegrees), -180.0f, 180.0f);
+	ImGui::SliderFloat3("Scale", glm::value_ptr(objectScale), 0.1f, 2.0f);
+
 	ImGui::End();
 }
 
@@ -548,11 +557,17 @@ void render(const graphics::internal::FrameData& fd) {
 
 	const float aspect = static_cast<float>(context.swapchain_extent.width) / static_cast<float>(context.swapchain_extent.height);
 
-	uniformBufferMemory->model = glm::rotate(
-		glm::mat4(1.0f),
-		glm::radians(25.0f),
-		glm::vec3(1.0f, 0.0f, 0.0f)
-	);
+	glm::mat4 model(1.0f);
+
+	model = glm::translate(model, objectPosition);
+
+	model = glm::rotate(model, glm::radians(objectRotationDegrees.x), glm::vec3(1.0f, 0.0f, 0.0f));
+	model = glm::rotate(model, glm::radians(objectRotationDegrees.y), glm::vec3(0.0f, 1.0f, 0.0f));
+	model = glm::rotate(model, glm::radians(objectRotationDegrees.z), glm::vec3(0.0f, 0.0f, 1.0f));
+
+	model = glm::scale(model, objectScale);
+
+	uniformBufferMemory->model = model;
 
 	uniformBufferMemory->view = glm::lookAt(
 		glm::vec3(2.0f, 1.8f, 2.5f),
@@ -560,7 +575,7 @@ void render(const graphics::internal::FrameData& fd) {
 		glm::vec3(0.0f, 1.0f, 0.0f)
 	);
 
-	if (usePerspectiveProjection)
+	if (perspectiveProjection)
 	{
 		uniformBufferMemory->projection = glm::perspective(
 			glm::radians(45.0f),
