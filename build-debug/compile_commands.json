@@ -220,11 +220,5 @@
   "command": "/usr/bin/c++ -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-src/src -g -Wall -Wextra -Wconversion -Wsign-conversion -o _deps/vk-bootstrap-build/CMakeFiles/vk-bootstrap.dir/src/VkBootstrap.cpp.o -c /home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-src/src/VkBootstrap.cpp",
   "file": "/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-src/src/VkBootstrap.cpp",
   "output": "/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-build/CMakeFiles/vk-bootstrap.dir/src/VkBootstrap.cpp.o"
-},
-{
-  "directory": "/home/snadon/ComputerGraphics-5sem/build-debug",
-  "command": "/usr/bin/c++ -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-src -g -o _deps/glm-build/glm/CMakeFiles/glm.dir/detail/glm.cpp.o -c /home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-src/glm/detail/glm.cpp",
-  "file": "/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-src/glm/detail/glm.cpp",
-  "output": "/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-build/glm/CMakeFiles/glm.dir/detail/glm.cpp.o"
 }
 ]

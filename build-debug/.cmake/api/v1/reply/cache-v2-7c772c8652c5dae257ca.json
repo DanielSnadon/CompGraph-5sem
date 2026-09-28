@@ -1123,7 +1123,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "7"
+			"value" : "5"
 		},
 		{
 			"name" : "CMAKE_OBJCOPY",
@@ -5336,6 +5336,18 @@
 			],
 			"type" : "STATIC",
 			"value" : "/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-build"
+		},
+		{
+			"name" : "glm_DIR",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "The directory containing a CMake configuration file for glm."
+				}
+			],
+			"type" : "PATH",
+			"value" : "/usr/share/cmake/glm"
 		},
 		{
 			"name" : "glm_IS_TOP_LEVEL",

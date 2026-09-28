@@ -57,11 +57,6 @@ if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   include("/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-build/cmake_install.cmake")
 endif()
 
-if(NOT CMAKE_INSTALL_LOCAL_ONLY)
-  # Include the install script for the subdirectory.
-  include("/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-build/cmake_install.cmake")
-endif()
-
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
 if(CMAKE_INSTALL_LOCAL_ONLY)

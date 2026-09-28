@@ -900,6 +900,9 @@ X11_xkbfile_LIB:FILEPATH=X11_xkbfile_LIB-NOTFOUND
 //Value Computed by CMake
 glm_BINARY_DIR:STATIC=/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glm-build
 
+//The directory containing a CMake configuration file for glm.
+glm_DIR:PATH=/usr/share/cmake/glm
+
 //Value Computed by CMake
 glm_IS_TOP_LEVEL:STATIC=OFF
 
@@ -1081,7 +1084,7 @@ CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_NM
 CMAKE_NM-ADVANCED:INTERNAL=1
 //number of local generators
-CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=7
+CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=5
 //ADVANCED property for variable: CMAKE_OBJCOPY
 CMAKE_OBJCOPY-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_OBJDUMP

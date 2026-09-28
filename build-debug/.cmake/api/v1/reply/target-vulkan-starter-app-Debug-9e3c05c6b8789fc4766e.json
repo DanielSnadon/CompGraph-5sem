@@ -36,7 +36,7 @@
 			{
 				"command" : 1,
 				"file" : 0,
-				"line" : 67,
+				"line" : 61,
 				"parent" : 0
 			},
 			{
@@ -57,7 +57,7 @@
 			{
 				"command" : 2,
 				"file" : 0,
-				"line" : 112,
+				"line" : 107,
 				"parent" : 0
 			},
 			{
@@ -69,13 +69,13 @@
 			{
 				"command" : 4,
 				"file" : 0,
-				"line" : 74,
+				"line" : 69,
 				"parent" : 0
 			},
 			{
 				"command" : 5,
 				"file" : 0,
-				"line" : 75,
+				"line" : 70,
 				"parent" : 0
 			}
 		]
@@ -102,6 +102,10 @@
 		{
 			"backtrace" : 2,
 			"id" : "VulkanMemoryAllocator::@3b7dc57821a5902e577d"
+		},
+		{
+			"backtrace" : 2,
+			"id" : "glm::glm::@6890427a1f51a3e7e1df"
 		}
 	],
 	"compileGroups" : 
@@ -253,6 +257,10 @@
 		{
 			"backtrace" : 2,
 			"id" : "VulkanMemoryAllocator::@3b7dc57821a5902e577d"
+		},
+		{
+			"backtrace" : 2,
+			"id" : "glm::glm::@6890427a1f51a3e7e1df"
 		}
 	],
 	"name" : "vulkan-starter-app",
