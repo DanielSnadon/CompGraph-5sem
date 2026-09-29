@@ -114,28 +114,33 @@ void generateCylinderGeometry() {
 	for (uint32_t i = 0; i < cylinderSegments; ++i)
 	{
 		const float angle = 2.0f * std::numbers::pi_v<float> * float(i) / float(cylinderSegments);
+
+		const float red = 0.5f + 0.5f * std::sin(angle);
+		const float green = 0.5f + 0.5f * std::sin(angle + 2.0f * std::numbers::pi_v<float> / 3.0f);
+		const float blue = 0.5f + 0.5f * std::sin(angle + 4.0f * std::numbers::pi_v<float> / 3.0f);
+		
 		const float x = radius * std::cos(angle);
 		const float z = radius * std::sin(angle);
 
 		cylinderVertices.push_back({
 			.position = {x, -height, z},
-			.color = {0.9f, 0.9f, 0.9f},
+			.color = {red, green, blue},
 		});
 
 		cylinderVertices.push_back({
 			.position = {x, height, z},
-			.color = {0.2f, 0.4f, 1.0f},
+			.color = {red, green, blue},
 		});
 	}
 
 	cylinderVertices.push_back({
 		.position = {0.0f, -height, 0.0f},
-		.color = {0.9f, 0.9f, 0.9f},
+		.color = {0.5f, 0.5f, 0.5f},
 	});
 
 	cylinderVertices.push_back({
 		.position = {0.0f, height, 0.0f},
-		.color = {0.2f, 0.4f, 1.0f},
+		.color = {0.5f, 0.5f, 0.5f},
 	});
 
 	const uint32_t bottomCenter = cylinderSegments * 2;
