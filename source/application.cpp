@@ -9,6 +9,7 @@
 #include <string>
 #include <cstring>
 #include <cstddef>
+#include <array>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -46,6 +47,19 @@ struct UniformBufferObject {
 // P.S:
 // Координаты модели ------> Мировые координаты ------> Координаты относительно камеры ------> Координаты экрана
 //                   modelMatrix              viewMatrix                        projectionMatrix
+
+struct RenderObject {
+	glm::vec3 position{0.0f};
+	glm::vec3 rotationDegrees{0.0f};
+	glm::vec3 scale{1.0f};
+
+	VkBuffer uniformBuffer = VK_NULL_HANDLE;
+	VmaAllocation uniformBufferAllocation = nullptr;
+	UniformBufferObject* uniformBufferMemory = nullptr;
+	VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
+};
+
+std::array<RenderObject, 3> renderObjects{};
 
 std::vector<Vertex> cylinderVertices;
 std::vector<uint32_t> cylinderIndices;
@@ -168,9 +182,18 @@ void generateCylinderGeometry() {
 
 bool initialize() {
 
-	// Cylinder
+	// Cylinder(s?)
 
 	generateCylinderGeometry();
+
+	renderObjects[0].position = {-0.8f, 0.0f, 0.0f};
+	renderObjects[1].position = {0.0f, 0.0f, 0.0f};
+	renderObjects[2].position = {0.8f, 0.0f, 0.0f};
+
+	for (RenderObject& object : renderObjects)
+	{
+		object.scale = glm::vec3(0.65f);
+	}
 
 	// Vertex Buffer
 
@@ -256,16 +279,25 @@ bool initialize() {
 		.usage = VMA_MEMORY_USAGE_AUTO,
 	};
 
-	if (vmaCreateBuffer(context.allocator, &uniformBufferInfo, &uniformAllocationInfo, &uniformBuffer, &uniformBufferAllocation, nullptr) != VK_SUCCESS)
-	{
-		std::cerr << "Не удалось создать uniform buffer.\n";
-		return false;
-	}
-
 	if (vmaMapMemory(context.allocator, uniformBufferAllocation, reinterpret_cast<void**>(&uniformBufferMemory)) != VK_SUCCESS)
 	{
 		std::cerr << "Не удалось отобразить uniform buffer память.\n";
 		return false;
+	}
+
+	// Dos
+	for (RenderObject& object : renderObjects)
+	{
+		if (vmaCreateBuffer(context.allocator, &uniformBufferInfo, &uniformAllocationInfo, &object.uniformBuffer, &object.uniformBufferAllocation, nullptr) != VK_SUCCESS)
+		{
+			std::cerr << "Не удалось создать uniform buffer.\n";
+			return false;
+		}
+		if (vmaMapMemory(context.allocator, object.uniformBufferAllocation, reinterpret_cast<void**>(&object.uniformBufferMemory)) != VK_SUCCESS)
+		{
+			std::cerr << "Не удалось отобразить uniform buffer память.\n";
+			return false;
+		}
 	}
 
 	// Matrix calculations
@@ -318,12 +350,12 @@ bool initialize() {
 
 	VkDescriptorPoolSize VkDescriptorPoolSize{
 		.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-		.descriptorCount = 1,
+		.descriptorCount = 4,
 	};
 	
 	VkDescriptorPoolCreateInfo descriptorPoolInfo{
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-		.maxSets = 1,
+		.maxSets = 4,
 		.poolSizeCount = 1,
 		.pPoolSizes = &VkDescriptorPoolSize,
 	};
@@ -336,36 +368,39 @@ bool initialize() {
 
 	// Descriptor set
 
-	VkDescriptorSetAllocateInfo descriptorSetAllocateInfo{
-		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-		.descriptorPool = descriptorPool,
-		.descriptorSetCount = 1,
-		.pSetLayouts = &descriptorSetLayout,
-	};
-	
-	if (vkAllocateDescriptorSets(context.device, &descriptorSetAllocateInfo, &descriptorSet) != VK_SUCCESS)
+	// Dos
+	for (RenderObject& object : renderObjects)
 	{
-		std::cerr << "Не удалось выделить descriptor set.\n";
-		return false;
+		VkDescriptorSetAllocateInfo objectSetAllocateInfo{
+			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+			.descriptorPool = descriptorPool,
+			.descriptorSetCount = 1,
+			.pSetLayouts = &descriptorSetLayout,
+		};
+
+		if (vkAllocateDescriptorSets(context.device, &objectSetAllocateInfo, &object.descriptorSet) != VK_SUCCESS)
+		{
+			std::cerr << "Не удалось выделить descriptor set.\n";
+			return false; 
+		}
+
+		VkDescriptorBufferInfo objectBufferInfo{
+			.buffer = object.uniformBuffer,
+			.offset = 0,
+			.range = sizeof(UniformBufferObject),
+		};
+
+		VkWriteDescriptorSet objectDescriptorWrite{
+			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			.dstSet = object.descriptorSet,
+			.dstBinding = 0,
+			.descriptorCount = 1,
+			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			.pBufferInfo = &objectBufferInfo,
+		};
+
+		vkUpdateDescriptorSets(context.device, 1, &objectDescriptorWrite, 0, nullptr);
 	}
-
-	VkDescriptorBufferInfo uniformDescriptorInfo{
-		.buffer = uniformBuffer,
-		.offset = 0,
-		.range = sizeof(UniformBufferObject),
-	};
-
-	VkWriteDescriptorSet descriptorWrite{
-		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-		.dstSet = descriptorSet,
-		.dstBinding = 0,
-		.dstArrayElement = 0,
-		.descriptorCount = 1,
-		.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-		.pBufferInfo = &uniformDescriptorInfo,
-	};
-
-	vkUpdateDescriptorSets(context.device, 1, &descriptorWrite, 0, nullptr);
 
 	// Pipeline layout
 
@@ -534,10 +569,14 @@ void shutdown() {
 	vkDestroyDescriptorPool(context.device, descriptorPool, nullptr);
 	descriptorSet = VK_NULL_HANDLE;
 
-	vmaUnmapMemory(context.allocator, uniformBufferAllocation);
-	uniformBufferMemory = nullptr;
+	// Dos
+	for (RenderObject& object : renderObjects)
+	{
+		vmaUnmapMemory(context.allocator, object.uniformBufferAllocation);
+		
+		vmaDestroyBuffer(context.allocator, object.uniformBuffer, object.uniformBufferAllocation);
+	}
 
-	vmaDestroyBuffer(context.allocator, uniformBuffer, uniformBufferAllocation);
 	vmaDestroyBuffer(context.allocator, indexBuffer, indexBufferAllocation);
 	vmaDestroyBuffer(context.allocator, vertexBuffer, vertexBufferAllocation);
 
@@ -611,28 +650,18 @@ void render(const graphics::internal::FrameData& fd) {
 	// II. View
 
 	const float aspect = static_cast<float>(context.swapchain_extent.width) / static_cast<float>(context.swapchain_extent.height);
-
-	glm::mat4 model(1.0f);
-
-	model = glm::translate(model, animatedPos);
-
-	model = glm::rotate(model, glm::radians(animatedRot.x), glm::vec3(1.0f, 0.0f, 0.0f));
-	model = glm::rotate(model, glm::radians(animatedRot.y), glm::vec3(0.0f, 1.0f, 0.0f));
-	model = glm::rotate(model, glm::radians(animatedRot.z), glm::vec3(0.0f, 0.0f, 1.0f));
-
-	model = glm::scale(model, objectScale);
-
-	uniformBufferMemory->model = model;
-
-	uniformBufferMemory->view = glm::lookAt(
+	
+	const glm::mat4 view = glm::lookAt(
 		glm::vec3(2.0f, 1.8f, 2.5f),
 		glm::vec3(0.0f, 0.0f, 0.0f),
 		glm::vec3(0.0f, 1.0f, 0.0f)
 	);
 
+	glm::mat4 projection;
+
 	if (perspectiveProjection)
 	{
-		uniformBufferMemory->projection = glm::perspective(
+		projection = glm::perspective(
 			glm::radians(45.0f),
 			aspect,
 			0.1f,
@@ -643,7 +672,7 @@ void render(const graphics::internal::FrameData& fd) {
 		const float halfHeight = 0.9f;
 		const float halfWidth = halfHeight * aspect;
 
-		uniformBufferMemory->projection = glm::ortho(
+		projection = glm::ortho(
 			-halfWidth,
 			halfWidth,
 			-halfHeight,
@@ -653,12 +682,29 @@ void render(const graphics::internal::FrameData& fd) {
 		);
 	}
 
-	uniformBufferMemory->projection[1][1] *= -1.0f;
+	projection[1][1] *= -1.0f;
 
-	uniformBufferMemory->color = glm::vec4(objectColor, 1.0f);
+	for (RenderObject& object : renderObjects)
+	{
+		glm::mat4 model(1.0f);
 
-	vmaFlushAllocation(context.allocator, uniformBufferAllocation, 0, sizeof(UniformBufferObject));
+		model = glm::translate(model, animatedPos + objectPosition);
 
+		const glm::vec3 rotation = animatedRot + object.rotationDegrees;
+
+		model = glm::rotate(model, glm::radians(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+		model = glm::rotate(model, glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::rotate(model, glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+
+		model = glm::scale(model, objectScale * object.scale);
+
+		object.uniformBufferMemory->model = model;
+		object.uniformBufferMemory->view = view;
+		object.uniformBufferMemory->projection = projection;
+		object.uniformBufferMemory->color = objectColor;
+
+		vmaFlushAllocation(context.allocator, object.uniformBufferAllocation, 0, sizeof(UniformBufferObject));
+	}
 	// III. Clearance and fill with dark color.
 
 	vkResetCommandBuffer(fd.command_buffer, 0);
@@ -700,14 +746,17 @@ void render(const graphics::internal::FrameData& fd) {
 
 	vkCmdBindPipeline(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
-	vkCmdBindDescriptorSets(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
-
 	VkDeviceSize vertexBufferOffset = 0;
 
 	vkCmdBindVertexBuffers(fd.command_buffer, 0, 1, &vertexBuffer, &vertexBufferOffset);
+
 	vkCmdBindIndexBuffer(fd.command_buffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-	vkCmdDrawIndexed(fd.command_buffer, static_cast<uint32_t>(cylinderIndices.size()), 1, 0, 0, 0);
+	for (const RenderObject& object : renderObjects)
+	{
+		vkCmdBindDescriptorSets(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &object.descriptorSet, 0, nullptr);
+		vkCmdDrawIndexed(fd.command_buffer, static_cast<uint32_t>(cylinderIndices.size()), 1, 0, 0, 0);
+	}
 
 	vkCmdEndRenderPass(fd.command_buffer);
 	vkEndCommandBuffer(fd.command_buffer);
