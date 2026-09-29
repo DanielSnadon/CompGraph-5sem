@@ -186,13 +186,13 @@ bool initialize() {
 
 	generateCylinderGeometry();
 
-	renderObjects[0].position = {-0.8f, 0.0f, 0.0f};
+	renderObjects[0].position = {-1.0f, 0.0f, 0.0f};
 	renderObjects[1].position = {0.0f, 0.0f, 0.0f};
-	renderObjects[2].position = {0.8f, 0.0f, 0.0f};
+	renderObjects[2].position = {1.0f, 0.0f, 0.0f};
 
 	for (RenderObject& object : renderObjects)
 	{
-		object.scale = glm::vec3(0.65f);
+		object.scale = glm::vec3(0.35f);
 	}
 
 	// Vertex Buffer
@@ -293,30 +293,6 @@ bool initialize() {
 			return false;
 		}
 	}
-
-	// Matrix calculations
-	// *uniformBufferMemory = UniformBufferObject{}; <- starting form
-
-	uniformBufferMemory->model = glm::rotate( // Cylinder
-		glm::mat4(1.0f),
-		glm::radians(25.0f),
-		glm::vec3(1.0f, 0.0f, 0.0f)
-	);
-
-	uniformBufferMemory->view = glm::lookAt( // Camera
-		glm::vec3(2.0f, 1.8f, 2.5f),
-		glm::vec3(0.0f, 0.0f, 0.0f),
-		glm::vec3(0.0f, 1.0f, 0.0f)
-	);
-
-	uniformBufferMemory->projection = glm::perspective( // Projection
-		glm::radians(45.0f),
-		static_cast<float>(context.swapchain_extent.width) / static_cast<float>(context.swapchain_extent.height), 0.1f, 10.0f
-	);
-
-	uniformBufferMemory->projection[1][1] *= -1.0f;
-
-	vmaFlushAllocation(context.allocator, uniformBufferAllocation, 0, sizeof(UniformBufferObject));
 
 	// Descriptor layout
 
