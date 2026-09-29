@@ -19,8 +19,16 @@
 
 namespace application {
 
+glm::vec3 objectColor{1.0f, 1.0f, 1.0f};
+
+bool animation = false;
+float animationSpeed = 1.0f;
+float trajectoryRadius = 0.7f;
+float trajectoryHeight = 0.3f;
+float animationPhase = 0.0f;
+
 glm::vec3 objectPosition{0.0f, 0.0f, 0.0f};
-glm::vec3 objectRotationDegrees{25.0f, 0.0f, 0.0f};
+glm::vec3 objectRotationDegrees{0.0f, 0.0f, 0.0f};
 glm::vec3 objectScale{1.0f, 1.0f, 1.0f};
 int perspectiveProjection = 1;
 
@@ -33,8 +41,9 @@ struct UniformBufferObject {
 	alignas(16) glm::mat4 model{1.0f};
 	alignas(16) glm::mat4 view{1.0f};
 	alignas(16) glm::mat4 projection{1.0f};
+	alignas(16) glm::vec3 color{1.0f, 1.0f, 1.0f};
 };
-
+// P.S:
 // Координаты модели ------> Мировые координаты ------> Координаты относительно камеры ------> Координаты экрана
 //                   modelMatrix              viewMatrix                        projectionMatrix
 
@@ -537,6 +546,15 @@ void shutdown() {
 }
 
 void update([[maybe_unused]] double time) {
+
+	// 1) Time
+
+	static double prevTime = time;
+	const double delta = time - prevTime;
+	prevTime = time;
+
+	// 2) ImGui stuff
+
 	ImGui::Begin("Settings");
 	ImGui::RadioButton("Perspective", &perspectiveProjection, 1);
 	ImGui::SameLine();
@@ -546,24 +564,56 @@ void update([[maybe_unused]] double time) {
 	ImGui::SliderFloat3("Rotation", glm::value_ptr(objectRotationDegrees), -180.0f, 180.0f);
 	ImGui::SliderFloat3("Scale", glm::value_ptr(objectScale), 0.1f, 2.0f);
 
+	ImGui::Checkbox("Animation", &animation);
+	ImGui::SliderFloat("Animation speed", &animationSpeed, -3.0f, 3.0f);
+	ImGui::SliderFloat("Trajectory radius", &trajectoryRadius, 0.0f, 1.5f);
+	ImGui::SliderFloat("Trajectory height", &trajectoryHeight, 0.0f, 1.0f);
+
+	ImGui::ColorEdit3("Color", glm::value_ptr(objectColor));
+
 	ImGui::End();
+
+	// 3) Animation
+
+	if (animation)
+	{
+		animationPhase += static_cast<float>(delta) * animationSpeed;
+
+		animationPhase = std::fmod(animationPhase, 2.0f * std::numbers::pi_v<float>);
+	}
 }
 
 void render(const graphics::internal::FrameData& fd) {
 
 	auto& context = graphics::internal::context;
 
-	// I. View
+	// I. Animation preparation
+
+	const float phase = animationPhase;
+
+	const glm::vec3 animatedPos = objectPosition + 
+		glm::vec3(
+			trajectoryRadius * std::cos(2.0f * phase),
+			trajectoryHeight * std::sin(phase),
+			trajectoryRadius * std::sin(2.0f * phase)
+		);
+	
+	glm::vec3 animatedRot = objectRotationDegrees;
+	animatedRot.x += 180.0f * std::cos(phase);
+	animatedRot.y += 180.0f * std::cos(phase);
+	animatedRot.z += 180.0f * std::sin(phase);
+
+	// II. View
 
 	const float aspect = static_cast<float>(context.swapchain_extent.width) / static_cast<float>(context.swapchain_extent.height);
 
 	glm::mat4 model(1.0f);
 
-	model = glm::translate(model, objectPosition);
+	model = glm::translate(model, animatedPos);
 
-	model = glm::rotate(model, glm::radians(objectRotationDegrees.x), glm::vec3(1.0f, 0.0f, 0.0f));
-	model = glm::rotate(model, glm::radians(objectRotationDegrees.y), glm::vec3(0.0f, 1.0f, 0.0f));
-	model = glm::rotate(model, glm::radians(objectRotationDegrees.z), glm::vec3(0.0f, 0.0f, 1.0f));
+	model = glm::rotate(model, glm::radians(animatedRot.x), glm::vec3(1.0f, 0.0f, 0.0f));
+	model = glm::rotate(model, glm::radians(animatedRot.y), glm::vec3(0.0f, 1.0f, 0.0f));
+	model = glm::rotate(model, glm::radians(animatedRot.z), glm::vec3(0.0f, 0.0f, 1.0f));
 
 	model = glm::scale(model, objectScale);
 
@@ -600,9 +650,11 @@ void render(const graphics::internal::FrameData& fd) {
 
 	uniformBufferMemory->projection[1][1] *= -1.0f;
 
+	uniformBufferMemory->color = glm::vec4(objectColor, 1.0f);
+
 	vmaFlushAllocation(context.allocator, uniformBufferAllocation, 0, sizeof(UniformBufferObject));
 
-	// II. Clearance and fill with dark color.
+	// III. Clearance and fill with dark color.
 
 	vkResetCommandBuffer(fd.command_buffer, 0);
 
@@ -623,7 +675,7 @@ void render(const graphics::internal::FrameData& fd) {
 	renderPassInfo.clearValueCount = 2;
 	renderPassInfo.pClearValues = clearValues;
 
-	// III. Main.
+	// IV. Main.
 
 	vkCmdBeginRenderPass(fd.command_buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
