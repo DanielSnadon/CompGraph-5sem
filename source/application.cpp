@@ -279,12 +279,6 @@ bool initialize() {
 		.usage = VMA_MEMORY_USAGE_AUTO,
 	};
 
-	if (vmaMapMemory(context.allocator, uniformBufferAllocation, reinterpret_cast<void**>(&uniformBufferMemory)) != VK_SUCCESS)
-	{
-		std::cerr << "Не удалось отобразить uniform buffer память.\n";
-		return false;
-	}
-
 	// Dos
 	for (RenderObject& object : renderObjects)
 	{
@@ -688,7 +682,7 @@ void render(const graphics::internal::FrameData& fd) {
 	{
 		glm::mat4 model(1.0f);
 
-		model = glm::translate(model, animatedPos + objectPosition);
+		model = glm::translate(model, animatedPos + object.position);
 
 		const glm::vec3 rotation = animatedRot + object.rotationDegrees;
 
