@@ -12,7 +12,7 @@ cmake --build build-debug --parallel
 
 #### Result:
 
-
+<img src="https://github.com/DanielSnadon/CompGraph-5sem/blob/master/images/lab1gif.gif" width="70%">
 
 
 ## Current total number of visits of all repositories related to 5 semester.
