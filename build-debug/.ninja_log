@@ -89,3 +89,17 @@
 4	132	1792439950189492578	/home/snadon/ComputerGraphics-5sem/shaders/basic.frag.spv	32a73cb1e3404359
 4	132	1792439969701217300	/home/snadon/ComputerGraphics-5sem/shaders/basic.frag.spv	32a73cb1e3404359
 4	135	1792439986113986043	/home/snadon/ComputerGraphics-5sem/shaders/basic.frag.spv	32a73cb1e3404359
+4	139	1792440251792223138	/home/snadon/ComputerGraphics-5sem/shaders/basic.frag.spv	32a73cb1e3404359
+139	1093	1792440251804222966	CMakeFiles/vulkan-starter-app.dir/source/application.cpp.o	ede0e0c9530de6a2
+1093	1291	1792440252758209383	vulkan-starter-app	5edffeae47bd6c46
+4	144	1792440284293760326	/home/snadon/ComputerGraphics-5sem/shaders/basic.vert.spv	c80a37faddece6b1
+4	151	1792440284300760227	/home/snadon/ComputerGraphics-5sem/shaders/basic.frag.spv	32a73cb1e3404359
+4	153	1792440329668114199	/home/snadon/ComputerGraphics-5sem/shaders/basic.vert.spv	c80a37faddece6b1
+4	144	1792440352483789315	/home/snadon/ComputerGraphics-5sem/shaders/basic.vert.spv	c80a37faddece6b1
+4	144	1792440408124998781	/home/snadon/ComputerGraphics-5sem/shaders/basic.frag.spv	32a73cb1e3404359
+5	149	1792440431006674060	/home/snadon/ComputerGraphics-5sem/shaders/basic.frag.spv	32a73cb1e3404359
+4	152	1792442848565452092	/home/snadon/ComputerGraphics-5sem/shaders/basic.frag.spv	32a73cb1e3404359
+5	152	1792442848566452080	/home/snadon/ComputerGraphics-5sem/shaders/basic.vert.spv	c80a37faddece6b1
+4	138	1792443315032639972	/home/snadon/ComputerGraphics-5sem/shaders/basic.frag.spv	32a73cb1e3404359
+3	825	1792445314604763543	CMakeFiles/vulkan-starter-app.dir/source/application.cpp.o	ede0e0c9530de6a2
+825	1037	1792445315426750816	vulkan-starter-app	5edffeae47bd6c46

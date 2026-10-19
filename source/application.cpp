@@ -32,6 +32,7 @@ glm::vec3 objectPosition{0.0f, 0.0f, 0.0f};
 glm::vec3 objectRotationDegrees{0.0f, 0.0f, 0.0f};
 glm::vec3 objectScale{1.0f, 1.0f, 1.0f};
 int perspectiveProjection = 1;
+float cameraFOV = 45.0f;
 
 struct Vertex {
 	float position[3];
@@ -484,7 +485,7 @@ bool initialize() {
 	vertexInputInfo.vertexBindingDescriptionCount = 1;
 	vertexInputInfo.pVertexBindingDescriptions = &vertexBinding;
 
-	vertexInputInfo.vertexAttributeDescriptionCount = 2;
+	vertexInputInfo.vertexAttributeDescriptionCount = 3;
 	vertexInputInfo.pVertexAttributeDescriptions = vertexAttributes;
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo{};
@@ -621,6 +622,8 @@ void update([[maybe_unused]] double time) {
 	ImGui::SameLine();
 	ImGui::RadioButton("Orthographic", &perspectiveProjection, 0);
 
+	ImGui::SliderFloat("Camera FOV", &cameraFOV, 20.0f, 100.0f);
+
 	ImGui::SliderFloat3("Position", glm::value_ptr(objectPosition), -2.0f, 2.0f);
 	ImGui::SliderFloat3("Rotation", glm::value_ptr(objectRotationDegrees), -180.0f, 180.0f);
 	ImGui::SliderFloat3("Scale", glm::value_ptr(objectScale), 0.1f, 2.0f);
@@ -679,7 +682,7 @@ void render(const graphics::internal::FrameData& fd) {
 	if (perspectiveProjection)
 	{
 		projection = glm::perspective(
-			glm::radians(45.0f),
+			glm::radians(cameraFOV),
 			aspect,
 			0.1f,
 			10.0f
