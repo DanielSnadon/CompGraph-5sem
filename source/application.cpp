@@ -36,6 +36,7 @@ int perspectiveProjection = 1;
 struct Vertex {
 	float position[3];
 	float color[3];
+	float normal[3];
 };
 
 struct UniformBufferObject {
@@ -139,26 +140,58 @@ void generateCylinderGeometry() {
 		cylinderVertices.push_back({
 			.position = {x, -height, z},
 			.color = {red, green, blue},
+			.normal = {std::cos(angle), 0.0f, std::sin(angle)},
 		});
 
 		cylinderVertices.push_back({
 			.position = {x, height, z},
 			.color = {red, green, blue},
+			.normal = {std::cos(angle), 0.0f, std::sin(angle)},
 		});
 	}
 
 	cylinderVertices.push_back({
 		.position = {0.0f, -height, 0.0f},
 		.color = {0.5f, 0.5f, 0.5f},
+		.normal = {0.0f, -1.0f, 0.0f},
 	});
 
 	cylinderVertices.push_back({
 		.position = {0.0f, height, 0.0f},
 		.color = {0.5f, 0.5f, 0.5f},
+		.normal = {0.0f, 1.0f, 0.0f},
 	});
 
 	const uint32_t bottomCenter = cylinderSegments * 2;
 	const uint32_t topCenter = bottomCenter + 1;
+
+	// [new] новые точки для оснований
+
+	const uint32_t capStart = static_cast<uint32_t>(cylinderVertices.size());
+
+	for (uint32_t i = 0; i < cylinderSegments; ++i)
+	{
+		const float angle = 2.0f * std::numbers::pi_v<float> * float(i) / float(cylinderSegments);
+
+		const float red = 0.5f + 0.5f * std::sin(angle);
+		const float green = 0.5f + 0.5f * std::sin(angle + 2.0f * std::numbers::pi_v<float> / 3.0f);
+		const float blue = 0.5f + 0.5f * std::sin(angle + 4.0f * std::numbers::pi_v<float> / 3.0f);
+		
+		const float x = radius * std::cos(angle);
+		const float z = radius * std::sin(angle);
+
+		cylinderVertices.push_back({
+			.position = {x, -height, z},
+			.color = {red, green, blue},
+			.normal = {0.0f, -1.0f, 0.0f},
+		});
+
+		cylinderVertices.push_back({
+			.position = {x, height, z},
+			.color = {red, green, blue},
+			.normal = {0.0f, 1.0f, 0.0f},
+		});
+	}
 
 	for (uint32_t i = 0; i < cylinderSegments; ++i)
 	{
@@ -170,11 +203,19 @@ void generateCylinderGeometry() {
 		const uint32_t nextBottom = next * 2;
 		const uint32_t nextTop = nextBottom + 1;
 
+		const uint32_t bottomCap = capStart + i * 2;
+		const uint32_t topCap = bottomCap + 1;
+
+		const uint32_t nextBottomCap = capStart + next * 2;
+		const uint32_t nextTopCap = nextBottomCap + 1;
+
+
 		cylinderIndices.insert(cylinderIndices.end(), {
 			bottom, top, nextBottom,
 			nextBottom, top, nextTop,
-			bottomCenter, bottom, nextBottom,
-			topCenter, nextTop, top,
+
+			bottomCenter, bottomCap, nextBottomCap,
+			topCenter, nextTopCap, topCap,
 		});
 	}
 
@@ -416,7 +457,7 @@ bool initialize() {
 		.inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
 	};
 
-	VkVertexInputAttributeDescription vertexAttributes[2]{
+	VkVertexInputAttributeDescription vertexAttributes[3]{
 		{
 			.location = 0,
 			.binding = 0,
@@ -429,6 +470,12 @@ bool initialize() {
 			.format = VK_FORMAT_R32G32B32_SFLOAT,
 			.offset = offsetof(Vertex, color),
 		},
+		{
+			.location = 2,
+			.binding = 0,
+			.format = VK_FORMAT_R32G32B32_SFLOAT,
+			.offset = offsetof(Vertex, normal),
+		}
 	};
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
