@@ -32,7 +32,11 @@ glm::vec3 objectPosition{0.0f, 0.0f, 0.0f};
 glm::vec3 objectRotationDegrees{0.0f, 0.0f, 0.0f};
 glm::vec3 objectScale{1.0f, 1.0f, 1.0f};
 int perspectiveProjection = 1;
+
+// [new] camera constants
 float cameraFOV = 45.0f;
+float cameraYaw = -128.66f;
+float cameraPitch = -29.34f;
 
 struct Vertex {
 	float position[3];
@@ -234,7 +238,7 @@ bool initialize() {
 
 	for (RenderObject& object : renderObjects)
 	{
-		object.scale = glm::vec3(0.35f);
+		object.scale = glm::vec3(0.55f);
 	}
 
 	// Vertex Buffer
@@ -617,21 +621,33 @@ void update([[maybe_unused]] double time) {
 
 	// 2) ImGui stuff
 
-	ImGui::Begin("Settings");
+	ImGui::Begin("Camera settings");
+	
 	ImGui::RadioButton("Perspective", &perspectiveProjection, 1);
 	ImGui::SameLine();
 	ImGui::RadioButton("Orthographic", &perspectiveProjection, 0);
 
 	ImGui::SliderFloat("Camera FOV", &cameraFOV, 20.0f, 100.0f);
 
-	ImGui::SliderFloat3("Position", glm::value_ptr(objectPosition), -2.0f, 2.0f);
-	ImGui::SliderFloat3("Rotation", glm::value_ptr(objectRotationDegrees), -180.0f, 180.0f);
-	ImGui::SliderFloat3("Scale", glm::value_ptr(objectScale), 0.1f, 2.0f);
+	ImGui::SliderFloat("Camera yaw", &cameraYaw, -180.0f, 180.0f);
+	ImGui::SliderFloat("Camera pitch", &cameraPitch, -90.0f, 90.0f);
+
+	ImGui::End();
+
+	ImGui::Begin("Animation settings");
 
 	ImGui::Checkbox("Animation", &animation);
 	ImGui::SliderFloat("Animation speed", &animationSpeed, -3.0f, 3.0f);
 	ImGui::SliderFloat("Trajectory radius", &trajectoryRadius, 0.0f, 1.5f);
 	ImGui::SliderFloat("Trajectory height", &trajectoryHeight, 0.0f, 1.0f);
+
+	ImGui::End();
+
+	ImGui::Begin("Cylinder settings");
+
+	ImGui::SliderFloat3("Position", glm::value_ptr(objectPosition), -2.0f, 2.0f);
+	ImGui::SliderFloat3("Rotation", glm::value_ptr(objectRotationDegrees), -180.0f, 180.0f);
+	ImGui::SliderFloat3("Scale", glm::value_ptr(objectScale), 0.1f, 2.0f);
 
 	ImGui::ColorEdit3("Color", glm::value_ptr(objectColor));
 
@@ -671,9 +687,20 @@ void render(const graphics::internal::FrameData& fd) {
 
 	const float aspect = static_cast<float>(context.swapchain_extent.width) / static_cast<float>(context.swapchain_extent.height);
 	
+	// [new] Camera settings!
+
+	const float yaw = glm::radians(cameraYaw);
+	const float pitch = glm::radians(cameraPitch);
+
+	const glm::vec3 cameraDirection{
+		std::cos(yaw) * std::cos(pitch),
+		std::sin(pitch),
+		std::sin(yaw) * std::cos(pitch),
+	};
+
 	const glm::mat4 view = glm::lookAt(
 		glm::vec3(2.0f, 1.8f, 2.5f),
-		glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(2.0f, 1.8f, 2.5f) + cameraDirection,
 		glm::vec3(0.0f, 1.0f, 0.0f)
 	);
 
