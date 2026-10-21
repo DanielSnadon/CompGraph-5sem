@@ -23,9 +23,9 @@ namespace application {
 glm::vec3 objectColor{1.0f, 1.0f, 1.0f};
 
 bool animation = false;
-float animationSpeed = 1.0f;
-float trajectoryRadius = 0.7f;
-float trajectoryHeight = 0.3f;
+float animationSpeed = 0.5f;
+float trajectoryRadius = 0.0f;
+float trajectoryHeight = 0.0f;
 float animationPhase = 0.0f;
 
 glm::vec3 objectPosition{0.0f, 0.0f, 0.0f};
@@ -43,6 +43,9 @@ glm::vec3 cameraPosition(2.0f, 1.8f, 2.5f);
 float shininess = 32.0f;
 float ambient = 0.15f;
 glm::vec3 specularColor(0.8f);
+glm::vec3 lightDirection(-0.5f, 1.0f, 0.3f);
+glm::vec3 lightColor(1.0f);
+float lightIntensity = 1.0f;
 
 struct Vertex {
 	float position[3];
@@ -58,10 +61,26 @@ struct UniformBufferObject {
 	alignas(16) glm::vec4 cameraPosition;
 	alignas(16) glm::vec4 materialParameters;
 	alignas(16) glm::vec4 specularColor;
+	alignas(16) glm::vec4 lightDirection;
+	alignas(16) glm::vec4 lightColorIntensity;
 };
-// P.S:
-// Координаты модели ------> Мировые координаты ------> Координаты относительно камеры ------> Координаты экрана
-//                   modelMatrix              viewMatrix                        projectionMatrix
+
+struct PointLight {
+	alignas(16) glm::vec4 position{0.0f, 2.0f, 0.0f, 1.0f};
+	alignas(16) glm::vec4 colorIntensity{1.0f, 1.0f, 1.0f, 1.0f};
+};
+
+constexpr uint32_t maxPointLights = 8;
+
+std::array<PointLight, maxPointLights> pointLights{};
+int pointLightCount = 1;
+
+// Lab2 be like:
+// + something const
+// + ImGui sliders
+// + into struct (uniformBuffer)
+// + into shaders
+// + render
 
 struct RenderObject {
 	glm::vec3 position{0.0f};
@@ -102,6 +121,10 @@ uint32_t* indexBufferMemory = nullptr;
 VkBuffer uniformBuffer = VK_NULL_HANDLE;
 VmaAllocation uniformBufferAllocation = nullptr;
 UniformBufferObject* uniformBufferMemory = nullptr;
+
+VkBuffer pointLightBuffer = VK_NULL_HANDLE;
+VmaAllocation pointLightBufferAllocation = nullptr;
+PointLight* pointLightBufferMemory = nullptr;
 
 VkShaderModule loadShaderModule(const char path[]) {
 	std::ifstream file(path, std::ios::binary | std::ios::ate);
@@ -347,6 +370,31 @@ bool initialize() {
 			std::cerr << "Не удалось отобразить uniform buffer память.\n";
 			return false;
 		}
+	}
+
+	// [new] PointLight
+
+	VkBufferCreateInfo pointLightBufferInfo{
+		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+		.size = sizeof(PointLight) * maxPointLights,
+		.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+	};
+	VmaAllocationCreateInfo pointLightAllocationInfo{
+		.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+		.usage = VMA_MEMORY_USAGE_AUTO,
+	};
+
+	if (vmaCreateBuffer(context.allocator, &pointLightBufferInfo, &pointLightAllocationInfo, &pointLightBuffer, &pointLightBufferAllocation, nullptr) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось созать point light buffer.\n";
+		return false;
+	}
+
+	if (vmaMapMemory(context.allocator, pointLightBufferAllocation, reinterpret_cast<void**>(&pointLightBufferMemory)) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось отобразить память point light buffer.\n";
+    	return false;
 	}
 
 	// Descriptor layout
@@ -598,6 +646,19 @@ void shutdown() {
 	auto& context = graphics::internal::context;
 	vkQueueWaitIdle(context.graphics_queue);
 
+	if (pointLightBufferMemory != nullptr)
+	{
+		vmaUnmapMemory(context.allocator, pointLightBufferAllocation);
+		pointLightBufferMemory = nullptr;
+	}
+
+	if (pointLightBuffer != VK_NULL_HANDLE)
+	{
+		vmaDestroyBuffer(context.allocator, pointLightBuffer, pointLightBufferAllocation);
+		pointLightBuffer = VK_NULL_HANDLE;
+		pointLightBufferAllocation = nullptr;
+	}
+
 	vkDestroyDescriptorPool(context.device, descriptorPool, nullptr);
 	descriptorSet = VK_NULL_HANDLE;
 
@@ -631,10 +692,25 @@ void update([[maybe_unused]] double time) {
 
 	// 2) ImGui stuff
 
+	ImGui::Begin("Point light settings");
+
+	PointLight& light = pointLights[0];
+
+	ImGui::SliderFloat3("Position", glm::value_ptr(light.position), -5.0f, 5.0f);
+	ImGui::ColorEdit3("Color", glm::value_ptr(light.colorIntensity));
+	ImGui::SliderFloat("Intensity", &light.colorIntensity.w, 0.0f, 10.0f);
+
+	ImGui::End();
+
 	ImGui::Begin("Lighting settings");
+
+	ImGui::SliderFloat3("Direction", glm::value_ptr(lightDirection), -1.0f, 1.0f);
+	ImGui::ColorEdit3("Color", glm::value_ptr(lightColor));
+	ImGui::SliderFloat("Intensity", &lightIntensity, 0.0f, 5.0f);
 
 	ImGui::SliderFloat("Specular brightness", &shininess, 1.0f, 128.0f);
 	ImGui::ColorEdit3("Specular color", &specularColor.x);
+
 	ImGui::SliderFloat("Ambient strength", &ambient, 0.0f, 1.0f);
 
 	ImGui::End();
@@ -774,6 +850,8 @@ void render(const graphics::internal::FrameData& fd) {
 		object.uniformBufferMemory->cameraPosition = glm::vec4(cameraPosition, 1.0f);
 		object.uniformBufferMemory->materialParameters = glm::vec4(shininess, ambient, 0.0f, 0.0f);
 		object.uniformBufferMemory->specularColor = glm::vec4(specularColor, 1.0f);
+		object.uniformBufferMemory->lightDirection = glm::vec4(lightDirection, 0.0f);
+		object.uniformBufferMemory->lightColorIntensity = glm::vec4(lightColor, lightIntensity);
 
 		vmaFlushAllocation(context.allocator, object.uniformBufferAllocation, 0, sizeof(UniformBufferObject));
 	}

@@ -14,11 +14,13 @@ layout(set = 0, binding = 0) uniform UniformBufferObject
     vec4 cameraPosition;
     vec4 materialParameters;
     vec4 specularColor;
+    vec4 lightDirection;
+    vec4 lightColorIntensity;
 } ubo;
 
 void main() {
     vec3 normal = normalize(inNormal);
-    vec3 lightDirection = normalize(vec3(-0.5, 1.0, 0.3));
+    vec3 lightDirection = normalize(ubo.lightDirection.xyz);
 
     float diffuse = max(dot(normal, lightDirection), 0.0);
 
@@ -26,7 +28,8 @@ void main() {
     vec3 halfVector = normalize(lightDirection + viewDirection);
     float specular = pow(max(dot(normal, halfVector), 0.0), ubo.materialParameters.x);
 
-    vec3 finalColor = inColor * ubo.materialParameters.y + inColor * (0.85 * diffuse) + ubo.specularColor.rgb * specular;
+    vec3 light = ubo.lightColorIntensity.rgb * ubo.lightColorIntensity.w;
+    vec3 finalColor = inColor * ubo.materialParameters.y + light * (inColor * (0.85 * diffuse) + ubo.specularColor.rgb * specular);
 
     outColor = vec4(finalColor, 1.0);
 }

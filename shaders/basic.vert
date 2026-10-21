@@ -15,6 +15,8 @@ layout(set = 0, binding = 0) uniform UniformBufferObject
     vec4 cameraPosition;
     vec4 materialParameters;
     vec4 specularColor;
+    vec4 lightDirection;
+    vec4 lightColorIntensity;
 } ubo;
 
 layout(location = 0) out vec3 outColor;
