@@ -93,3 +93,5 @@
 6	148	1792609718600995097	/home/snadon/ComputerGraphics-5sem/shaders/basic.vert.spv	c80a37faddece6b1
 148	965	1792609718611994860	CMakeFiles/vulkan-starter-app.dir/source/application.cpp.o	ede0e0c9530de6a2
 965	1122	1792609719428977293	vulkan-starter-app	5edffeae47bd6c46
+8	1002	1792611113659884609	CMakeFiles/vulkan-starter-app.dir/source/application.cpp.o	ede0e0c9530de6a2
+1002	1231	1792611114653862777	vulkan-starter-app	5edffeae47bd6c46

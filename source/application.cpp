@@ -575,6 +575,7 @@ bool initialize() {
 	pipelineInfo.pRasterizationState = &rasterInfo;
 	pipelineInfo.pDepthStencilState = &depthInfo;
 	pipelineInfo.pMultisampleState = &sampleInfo;
+	pipelineInfo.pDepthStencilState = &depthInfo;
 	pipelineInfo.pColorBlendState = &blendInfo;
 	pipelineInfo.pDynamicState = &dynamicInfo;
 
