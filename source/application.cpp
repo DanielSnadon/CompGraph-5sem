@@ -33,10 +33,16 @@ glm::vec3 objectRotationDegrees{0.0f, 0.0f, 0.0f};
 glm::vec3 objectScale{1.0f, 1.0f, 1.0f};
 int perspectiveProjection = 1;
 
-// [new] camera constants
+// [new] camera const
 float cameraFOV = 45.0f;
-float cameraYaw = -128.66f;
-float cameraPitch = -29.34f;
+float cameraYaw = -130.0f;
+float cameraPitch = -30.0f;
+glm::vec3 cameraPosition(2.0f, 1.8f, 2.5f);
+
+// [new] light const
+float shininess = 32.0f;
+float ambient = 0.15f;
+glm::vec3 specularColor(0.8f);
 
 struct Vertex {
 	float position[3];
@@ -49,6 +55,9 @@ struct UniformBufferObject {
 	alignas(16) glm::mat4 view{1.0f};
 	alignas(16) glm::mat4 projection{1.0f};
 	alignas(16) glm::vec3 color{1.0f, 1.0f, 1.0f};
+	alignas(16) glm::vec4 cameraPosition;
+	alignas(16) glm::vec4 materialParameters;
+	alignas(16) glm::vec4 specularColor;
 };
 // P.S:
 // Координаты модели ------> Мировые координаты ------> Координаты относительно камеры ------> Координаты экрана
@@ -346,7 +355,7 @@ bool initialize() {
 		.binding = 0,
 		.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 		.descriptorCount = 1,
-		.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+		.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
 		.pImmutableSamplers = nullptr,
 	};
 
@@ -621,6 +630,14 @@ void update([[maybe_unused]] double time) {
 
 	// 2) ImGui stuff
 
+	ImGui::Begin("Lighting settings");
+
+	ImGui::SliderFloat("Specular brightness", &shininess, 1.0f, 128.0f);
+	ImGui::ColorEdit3("Specular color", &specularColor.x);
+	ImGui::SliderFloat("Ambient strength", &ambient, 0.0f, 1.0f);
+
+	ImGui::End();
+
 	ImGui::Begin("Camera settings");
 	
 	ImGui::RadioButton("Perspective", &perspectiveProjection, 1);
@@ -631,6 +648,10 @@ void update([[maybe_unused]] double time) {
 
 	ImGui::SliderFloat("Camera yaw", &cameraYaw, -180.0f, 180.0f);
 	ImGui::SliderFloat("Camera pitch", &cameraPitch, -90.0f, 90.0f);
+
+	ImGui::SliderFloat("Camera X", &cameraPosition.x, -5.0f, 5.0f);
+	ImGui::SliderFloat("Camera Y", &cameraPosition.y, -5.0f, 5.0f);
+	ImGui::SliderFloat("Camera Z", &cameraPosition.z, -5.0f, 5.0f);
 
 	ImGui::End();
 
@@ -687,7 +708,7 @@ void render(const graphics::internal::FrameData& fd) {
 
 	const float aspect = static_cast<float>(context.swapchain_extent.width) / static_cast<float>(context.swapchain_extent.height);
 	
-	// [new] Camera settings!
+	// [new] camera settings!
 
 	const float yaw = glm::radians(cameraYaw);
 	const float pitch = glm::radians(cameraPitch);
@@ -699,8 +720,8 @@ void render(const graphics::internal::FrameData& fd) {
 	};
 
 	const glm::mat4 view = glm::lookAt(
-		glm::vec3(2.0f, 1.8f, 2.5f),
-		glm::vec3(2.0f, 1.8f, 2.5f) + cameraDirection,
+		cameraPosition,
+		cameraPosition + cameraDirection,
 		glm::vec3(0.0f, 1.0f, 0.0f)
 	);
 
@@ -749,6 +770,9 @@ void render(const graphics::internal::FrameData& fd) {
 		object.uniformBufferMemory->view = view;
 		object.uniformBufferMemory->projection = projection;
 		object.uniformBufferMemory->color = objectColor;
+		object.uniformBufferMemory->cameraPosition = glm::vec4(cameraPosition, 1.0f);
+		object.uniformBufferMemory->materialParameters = glm::vec4(shininess, ambient, 0.0f, 0.0f);
+		object.uniformBufferMemory->specularColor = glm::vec4(specularColor, 1.0f);
 
 		vmaFlushAllocation(context.allocator, object.uniformBufferAllocation, 0, sizeof(UniformBufferObject));
 	}
