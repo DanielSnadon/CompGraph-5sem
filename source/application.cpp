@@ -151,6 +151,8 @@ Vertex* spotLineVertexMemory = nullptr;
 
 constexpr float lightMarkerSize = 0.1f;
 
+bool showVisualization = true;
+
 // Lab2 be like:
 // + something const/struct
 // + ImGui sliders
@@ -1186,6 +1188,8 @@ void update([[maybe_unused]] double time) {
 	ImGui::SliderFloat("Ambient strength", &ambient, 0.0f, 1.0f);
 	ImGui::ColorEdit3("Ambient color", glm::value_ptr(ambientColor));
 
+	ImGui::Checkbox("Visualization", &showVisualization);
+
 	ImGui::End();
 
 	ImGui::Begin("Camera settings");
@@ -1235,6 +1239,16 @@ void update([[maybe_unused]] double time) {
 }
 
 #pragma endregion
+
+Vertex makeLightLineVertex(const glm::vec3& position)
+{
+    return Vertex{
+        .position = {position.x, position.y, position.z},
+        .color = {1.0f, 1.0f, 1.0f},
+        .normal = {0.0f, 1.0f, 0.0f},
+    };
+}
+
 #pragma region Render
 
 void render(const graphics::internal::FrameData& fd) {
@@ -1409,6 +1423,34 @@ void render(const graphics::internal::FrameData& fd) {
 			.color = {1.0f, 1.0f, 1.0f},
 			.normal = {0.0f, 1.0f, 0.0f},
 		};
+
+		glm::vec3 reference(0.0f, 1.0f, 0.0f);
+		if (std::abs(direction.y) > 0.99f)
+		{
+			reference = glm::vec3(1.0f, 0.0f, 0.0f);
+		}
+
+		const glm::vec3 right = glm::normalize(glm::cross(direction, reference));
+		const glm::vec3 up = glm::cross(right, direction);
+		const float radius = std::tan(glm::radians(spotLights[i].coneAnglesDegrees.y)) / lightMarkerSize;
+		uint32_t vertexIndex = 2;
+
+		for (uint32_t j = 0; j < spotConeSegments; ++j)
+		{
+			const float angle = 2.0f * std::numbers::pi_v<float> * float(j) / float(spotConeSegments);
+			const float nextAngle = 2.0f * std::numbers::pi_v<float> * float(j + 1) / float(spotConeSegments);
+
+			const glm::vec3 first = end + radius * (std::cos(angle) * right + std::sin(angle) * up);
+			const glm::vec3 second = end + radius * (std::cos(nextAngle) * right + std::sin(nextAngle) * up);
+			vertices[vertexIndex++] = makeLightLineVertex(first);
+			vertices[vertexIndex++] = makeLightLineVertex(second);
+
+			if (j % (spotConeSegments / 4) == 0)
+			{
+				vertices[vertexIndex++] = makeLightLineVertex(glm::vec3(0.0f));
+				vertices[vertexIndex++] = makeLightLineVertex(first);
+			}
+		}
 	}
 
 	vmaFlushAllocation(context.allocator, spotLineVertexAllocation, 0, VK_WHOLE_SIZE);
@@ -1468,28 +1510,31 @@ void render(const graphics::internal::FrameData& fd) {
 		vkCmdDrawIndexed(fd.command_buffer, static_cast<uint32_t>(cylinderIndices.size()), 1, 0, 0, 0);
 	}
 
-	vkCmdBindVertexBuffers(fd.command_buffer, 0, 1, &lightMarkerVertexBuffer, &vertexBufferOffset);
-	vkCmdBindIndexBuffer(fd.command_buffer, lightMarkerIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-	for (int i = 0; i < activeMarkerCount; ++i)
+	if (showVisualization)
 	{
-		const RenderObject& marker = lightMarkers[i];
+		vkCmdBindVertexBuffers(fd.command_buffer, 0, 1, &lightMarkerVertexBuffer, &vertexBufferOffset);
+		vkCmdBindIndexBuffer(fd.command_buffer, lightMarkerIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-		vkCmdBindDescriptorSets(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &marker.descriptorSet, 0, nullptr);
-		vkCmdDrawIndexed(fd.command_buffer, static_cast<uint32_t>(lightMarkerIndices.size()), 1, 0, 0, 0);
-	}
+		for (int i = 0; i < activeMarkerCount; ++i)
+		{
+			const RenderObject& marker = lightMarkers[i];
 
-	// spotLines
+			vkCmdBindDescriptorSets(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &marker.descriptorSet, 0, nullptr);
+			vkCmdDrawIndexed(fd.command_buffer, static_cast<uint32_t>(lightMarkerIndices.size()), 1, 0, 0, 0);
+		}
 
-	vkCmdBindPipeline(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, lightLinePipeline);
-	vkCmdBindVertexBuffers(fd.command_buffer, 0, 1, &spotLineVertexBuffer, &vertexBufferOffset);
+		// spotLines
 
-	for (int i = 0; i < spotLightCount; ++i)
-	{
-		const RenderObject& marker = lightMarkers[pointLightCount + i];
+		vkCmdBindPipeline(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, lightLinePipeline);
+		vkCmdBindVertexBuffers(fd.command_buffer, 0, 1, &spotLineVertexBuffer, &vertexBufferOffset);
 
-		vkCmdBindDescriptorSets(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &marker.descriptorSet, 0, nullptr);
-		vkCmdDraw(fd.command_buffer, 2, 1, static_cast<uint32_t>(i) * spotLineVerticesPerLight, 0);
+		for (int i = 0; i < spotLightCount; ++i)
+		{
+			const RenderObject& marker = lightMarkers[pointLightCount + i];
+
+			vkCmdBindDescriptorSets(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &marker.descriptorSet, 0, nullptr);
+			vkCmdDraw(fd.command_buffer, spotLineVerticesPerLight, 1, static_cast<uint32_t>(i) * spotLineVerticesPerLight, 0);
+		}
 	}
 
 	vkCmdEndRenderPass(fd.command_buffer);

@@ -1,6 +1,7 @@
 # 🌋 Vulkan labs (Computer Graphics)
 
 ## Lab 1
+## < Основы 3D-графики >
 
 How to start the simulation:
 
@@ -13,6 +14,21 @@ cmake --build build-debug --parallel
 #### Result:
 
 <img src="https://github.com/DanielSnadon/CompGraph-5sem/blob/master/images/lab1gif.gif" width="70%">
+
+## Lab 2
+## < Камера и освещение >
+
+How to start the simulation:
+
+```bash
+cmake --build build-debug
+./build-debug/vulkan-starter-app
+```
+
+#### Result:
+
+<img src="https://github.com/DanielSnadon/CompGraph-5sem/blob/master/images/lab2gif.gif" width="70%">
+
 
 
 ## Current total number of visits of all repositories related to 5 semester.
