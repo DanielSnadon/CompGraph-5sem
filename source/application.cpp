@@ -75,19 +75,18 @@ const std::array<uint32_t, 36> lightMarkerIndices{
     3, 7, 6,  3, 6, 2,  // +Y
 };
 
-
-// unused?
-struct UniformBufferObject {
-	alignas(16) glm::mat4 model{1.0f};
-	alignas(16) glm::mat4 view{1.0f};
-	alignas(16) glm::mat4 projection{1.0f};
-	alignas(16) glm::vec3 color{1.0f, 1.0f, 1.0f};
-	alignas(16) glm::vec4 cameraPosition;
-	alignas(16) glm::vec4 materialParameters;
-	alignas(16) glm::vec4 specularColor;
-	alignas(16) glm::vec4 lightDirection;
-	alignas(16) glm::vec4 lightColorIntensity;
-};
+// unused.
+// struct UniformBufferObject {
+// 	alignas(16) glm::mat4 model{1.0f};
+// 	alignas(16) glm::mat4 view{1.0f};
+// 	alignas(16) glm::mat4 projection{1.0f};
+// 	alignas(16) glm::vec3 color{1.0f, 1.0f, 1.0f};
+// 	alignas(16) glm::vec4 cameraPosition;
+// 	alignas(16) glm::vec4 materialParameters;
+// 	alignas(16) glm::vec4 specularColor;
+// 	alignas(16) glm::vec4 lightDirection;
+// 	alignas(16) glm::vec4 lightColorIntensity;
+// };
 
 // [new] struct
 
@@ -143,6 +142,15 @@ int spotLightCount = 1;
 constexpr uint32_t maxLightMarkers = maxPointLights + maxSpotLights;
 std::array<RenderObject, maxLightMarkers> lightMarkers{};
 
+constexpr uint32_t spotConeSegments = 16;
+constexpr uint32_t spotLineVerticesPerLight = 2 + 2 * spotConeSegments + 8;
+
+VkBuffer spotLineVertexBuffer = VK_NULL_HANDLE;
+VmaAllocation spotLineVertexAllocation = nullptr;
+Vertex* spotLineVertexMemory = nullptr;
+
+constexpr float lightMarkerSize = 0.1f;
+
 // Lab2 be like:
 // + something const/struct
 // + ImGui sliders
@@ -160,7 +168,6 @@ constexpr uint32_t cylinderSegments = 50;
 VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
 VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
 VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
-VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 
 VkDescriptorSetLayout sceneDescriptorSetLayout = VK_NULL_HANDLE;
 VkDescriptorSetLayout modelDescriptorSetLayout = VK_NULL_HANDLE;
@@ -171,6 +178,7 @@ VkShaderModule vertexShader = VK_NULL_HANDLE;
 VkShaderModule fragmentShader = VK_NULL_HANDLE;
 
 VkPipeline graphicsPipeline = VK_NULL_HANDLE;
+VkPipeline lightLinePipeline = VK_NULL_HANDLE;
 
 VkBuffer vertexBuffer = VK_NULL_HANDLE;
 VmaAllocation vertexBufferAllocation = nullptr;
@@ -179,10 +187,6 @@ Vertex* vertexBufferMemory = nullptr;
 VkBuffer indexBuffer = VK_NULL_HANDLE;
 VmaAllocation indexBufferAllocation = nullptr;
 uint32_t* indexBufferMemory = nullptr;
-
-VkBuffer uniformBuffer = VK_NULL_HANDLE;
-VmaAllocation uniformBufferAllocation = nullptr;
-UniformBufferObject* uniformBufferMemory = nullptr;
 
 VkBuffer sceneUniformBuffer = VK_NULL_HANDLE;
 VmaAllocation sceneUniformBufferAllocation = nullptr;
@@ -598,6 +602,27 @@ bool initialize() {
 
 	vmaFlushAllocation(context.allocator, lightMarkerIndexAllocation, 0, markerIndexDataSize);
 
+		// SpotLines
+
+	VkBufferCreateInfo spotLineBufferInfo{
+		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+		.size = sizeof(Vertex)
+			* maxSpotLights
+			* spotLineVerticesPerLight,
+		.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+	};
+
+	VmaAllocationInfo spotLineMemoryInfo{};
+
+	if (vmaCreateBuffer(context.allocator, &spotLineBufferInfo, &markerAllocationInfo, &spotLineVertexBuffer, &spotLineVertexAllocation, &spotLineMemoryInfo) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось создать vertex buffer линий.\n";
+		return false;
+	}
+
+	spotLineVertexMemory = static_cast<Vertex*>(spotLineMemoryInfo.pMappedData);
+
 	// Descriptor layout
 
 	VkDescriptorSetLayoutBinding uniformLayoutBinding{
@@ -994,6 +1019,16 @@ bool initialize() {
 		return false;
 	}
 
+	// [new] LIGHT-LINE PIPELINE
+
+	inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+
+	if (vkCreateGraphicsPipelines(context.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &lightLinePipeline) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось создать pipeline линий света.\n";
+		return false;
+	}
+
 	return true;
 }
 
@@ -1003,6 +1038,8 @@ bool initialize() {
 void shutdown() {
 	auto& context = graphics::internal::context;
 	vkQueueWaitIdle(context.graphics_queue);
+
+	vmaDestroyBuffer(context.allocator, spotLineVertexBuffer, spotLineVertexAllocation);
 
 	for (RenderObject& marker : lightMarkers)
 	{
@@ -1053,7 +1090,6 @@ void shutdown() {
 	}
 
 	vkDestroyDescriptorPool(context.device, descriptorPool, nullptr);
-	descriptorSet = VK_NULL_HANDLE;
 
 	for (RenderObject& object : renderObjects)
 	{
@@ -1066,6 +1102,7 @@ void shutdown() {
 	vmaDestroyBuffer(context.allocator, vertexBuffer, vertexBufferAllocation);
 
 	vkDestroyPipeline(context.device, graphicsPipeline, nullptr);
+	vkDestroyPipeline(context.device, lightLinePipeline, nullptr);
 	vkDestroyPipelineLayout(context.device, pipelineLayout, nullptr);
 
 	vkDestroyDescriptorSetLayout(context.device, sceneDescriptorSetLayout, nullptr);
@@ -1341,7 +1378,7 @@ void render(const graphics::internal::FrameData& fd) {
 		RenderObject& marker = lightMarkers[i];
 
 		glm::mat4 markerModel = glm::translate(glm::mat4(1.0f), markerPosition);
-		markerModel = glm::scale(markerModel, glm::vec3(0.1f));
+		markerModel = glm::scale(markerModel, glm::vec3(lightMarkerSize));
 
 		marker.uniformBufferMemory->model = markerModel;
 		marker.uniformBufferMemory->color = glm::vec4(markerColor, 1.0f);
@@ -1350,6 +1387,31 @@ void render(const graphics::internal::FrameData& fd) {
 
 		vmaFlushAllocation(context.allocator, marker.uniformBufferAllocation, 0, sizeof(ModelUniformBufferObject));
 	}
+
+	// (SpotLines fillmento)
+
+	for (int i = 0; i < spotLightCount; ++i)
+	{
+		glm::vec3 direction = glm::vec3(spotLights[i].direction);
+		direction = glm::normalize(direction);
+
+		const glm::vec3 end = direction / lightMarkerSize;
+		Vertex* vertices = spotLineVertexMemory + i * spotLineVerticesPerLight;
+
+		vertices[0] = Vertex{
+			.position = {0.0f, 0.0f, 0.0f},
+			.color = {1.0f, 1.0f, 1.0f},
+			.normal = {0.0f, 1.0f, 0.0f},
+		};
+
+		vertices[1] = Vertex{
+			.position = {end.x, end.y, end.z},
+			.color = {1.0f, 1.0f, 1.0f},
+			.normal = {0.0f, 1.0f, 0.0f},
+		};
+	}
+
+	vmaFlushAllocation(context.allocator, spotLineVertexAllocation, 0, VK_WHOLE_SIZE);
 
 	// IV. Clearance and fill with dark color.
 
@@ -1415,6 +1477,19 @@ void render(const graphics::internal::FrameData& fd) {
 
 		vkCmdBindDescriptorSets(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &marker.descriptorSet, 0, nullptr);
 		vkCmdDrawIndexed(fd.command_buffer, static_cast<uint32_t>(lightMarkerIndices.size()), 1, 0, 0, 0);
+	}
+
+	// spotLines
+
+	vkCmdBindPipeline(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, lightLinePipeline);
+	vkCmdBindVertexBuffers(fd.command_buffer, 0, 1, &spotLineVertexBuffer, &vertexBufferOffset);
+
+	for (int i = 0; i < spotLightCount; ++i)
+	{
+		const RenderObject& marker = lightMarkers[pointLightCount + i];
+
+		vkCmdBindDescriptorSets(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &marker.descriptorSet, 0, nullptr);
+		vkCmdDraw(fd.command_buffer, 2, 1, static_cast<uint32_t>(i) * spotLineVerticesPerLight, 0);
 	}
 
 	vkCmdEndRenderPass(fd.command_buffer);
