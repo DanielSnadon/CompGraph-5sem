@@ -357,7 +357,6 @@ bool initialize() {
 		.usage = VMA_MEMORY_USAGE_AUTO,
 	};
 
-	// Dos
 	for (RenderObject& object : renderObjects)
 	{
 		if (vmaCreateBuffer(context.allocator, &uniformBufferInfo, &uniformAllocationInfo, &object.uniformBuffer, &object.uniformBufferAllocation, nullptr) != VK_SUCCESS)
@@ -407,10 +406,22 @@ bool initialize() {
 		.pImmutableSamplers = nullptr,
 	};
 
+	VkDescriptorSetLayoutBinding pointLightLayoutBinding{
+		.binding = 1,
+		.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+		.descriptorCount = 1,
+		.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+	};
+
+	VkDescriptorSetLayoutBinding layoutBindings[]{
+		uniformLayoutBinding,
+		pointLightLayoutBinding,
+	};
+
 	VkDescriptorSetLayoutCreateInfo descriptorLayoutInfo{
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-		.bindingCount = 1,
-		.pBindings = &uniformLayoutBinding,
+		.bindingCount = 2,
+		.pBindings = layoutBindings,
 	};
 
 	if (vkCreateDescriptorSetLayout(context.device, &descriptorLayoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)
@@ -421,16 +432,22 @@ bool initialize() {
 
 	// Descriptor pool
 
-	VkDescriptorPoolSize VkDescriptorPoolSize{
-		.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-		.descriptorCount = 4,
+	VkDescriptorPoolSize poolSizes[]{
+		{
+			.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			.descriptorCount = 4,
+		},
+		{
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.descriptorCount = 4,
+		},
 	};
-	
+
 	VkDescriptorPoolCreateInfo descriptorPoolInfo{
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 		.maxSets = 4,
-		.poolSizeCount = 1,
-		.pPoolSizes = &VkDescriptorPoolSize,
+		.poolSizeCount = 2,
+		.pPoolSizes = poolSizes,
 	};
 
 	if (vkCreateDescriptorPool(context.device, &descriptorPoolInfo, nullptr, &descriptorPool) != VK_SUCCESS)
@@ -441,7 +458,6 @@ bool initialize() {
 
 	// Descriptor set
 
-	// Dos
 	for (RenderObject& object : renderObjects)
 	{
 		VkDescriptorSetAllocateInfo objectSetAllocateInfo{
@@ -473,6 +489,23 @@ bool initialize() {
 		};
 
 		vkUpdateDescriptorSets(context.device, 1, &objectDescriptorWrite, 0, nullptr);
+
+		VkDescriptorBufferInfo pointLightDescriptorInfo{
+			.buffer = pointLightBuffer,
+			.offset = 0,
+			.range = sizeof(PointLight) * maxPointLights,
+		};
+
+		VkWriteDescriptorSet pointLightDescriptorWrite{
+			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			.dstSet = object.descriptorSet,
+			.dstBinding = 1,
+			.descriptorCount = 1,
+			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.pBufferInfo = &pointLightDescriptorInfo,
+		};
+
+		vkUpdateDescriptorSets(context.device, 1, &pointLightDescriptorWrite, 0, nullptr);
 	}
 
 	// Pipeline layout
@@ -662,7 +695,6 @@ void shutdown() {
 	vkDestroyDescriptorPool(context.device, descriptorPool, nullptr);
 	descriptorSet = VK_NULL_HANDLE;
 
-	// Dos
 	for (RenderObject& object : renderObjects)
 	{
 		vmaUnmapMemory(context.allocator, object.uniformBufferAllocation);
@@ -694,11 +726,24 @@ void update([[maybe_unused]] double time) {
 
 	ImGui::Begin("Point light settings");
 
-	PointLight& light = pointLights[0];
+	
+	ImGui::SliderInt("Light count", &pointLightCount, 0, static_cast<int>(maxPointLights));
 
-	ImGui::SliderFloat3("Position", glm::value_ptr(light.position), -5.0f, 5.0f);
-	ImGui::ColorEdit3("Color", glm::value_ptr(light.colorIntensity));
-	ImGui::SliderFloat("Intensity", &light.colorIntensity.w, 0.0f, 10.0f);
+	for (int i = 0; i < pointLightCount; ++i)
+	{
+		ImGui::PushID(i);
+
+		ImGui::Text("Point light %d", i + 1);
+
+		PointLight& light = pointLights[i];
+
+		ImGui::SliderFloat3("Position", glm::value_ptr(light.position), -5.0f, 5.0f);
+		ImGui::ColorEdit3("Color", glm::value_ptr(light.colorIntensity));
+		ImGui::SliderFloat("Intensity", &light.colorIntensity.w, 0.0f, 10.0f);
+
+		ImGui::Separator();
+		ImGui::PopID();
+	}
 
 	ImGui::End();
 
@@ -765,7 +810,15 @@ void render(const graphics::internal::FrameData& fd) {
 
 	auto& context = graphics::internal::context;
 
-	// I. Animation preparation
+	// [new] I. PointLight
+
+	const size_t pointLightDataSize = sizeof(PointLight) * maxPointLights;
+	
+	std::memcpy(pointLightBufferMemory, pointLights.data(), pointLightDataSize);
+
+	vmaFlushAllocation(context.allocator, pointLightBufferAllocation, 0, pointLightDataSize);
+
+	// II. Animation preparation
 
 	const float phase = animationPhase;
 
@@ -781,7 +834,7 @@ void render(const graphics::internal::FrameData& fd) {
 	animatedRot.y += 180.0f * std::cos(phase);
 	animatedRot.z += 180.0f * std::sin(phase);
 
-	// II. View
+	// III. View
 
 	const float aspect = static_cast<float>(context.swapchain_extent.width) / static_cast<float>(context.swapchain_extent.height);
 	
@@ -848,14 +901,14 @@ void render(const graphics::internal::FrameData& fd) {
 		object.uniformBufferMemory->projection = projection;
 		object.uniformBufferMemory->color = objectColor;
 		object.uniformBufferMemory->cameraPosition = glm::vec4(cameraPosition, 1.0f);
-		object.uniformBufferMemory->materialParameters = glm::vec4(shininess, ambient, 0.0f, 0.0f);
+		object.uniformBufferMemory->materialParameters = glm::vec4(shininess, ambient, static_cast<float>(pointLightCount), 0.0f);
 		object.uniformBufferMemory->specularColor = glm::vec4(specularColor, 1.0f);
 		object.uniformBufferMemory->lightDirection = glm::vec4(lightDirection, 0.0f);
 		object.uniformBufferMemory->lightColorIntensity = glm::vec4(lightColor, lightIntensity);
 
 		vmaFlushAllocation(context.allocator, object.uniformBufferAllocation, 0, sizeof(UniformBufferObject));
 	}
-	// III. Clearance and fill with dark color.
+	// IV. Clearance and fill with dark color.
 
 	vkResetCommandBuffer(fd.command_buffer, 0);
 
@@ -876,7 +929,7 @@ void render(const graphics::internal::FrameData& fd) {
 	renderPassInfo.clearValueCount = 2;
 	renderPassInfo.pClearValues = clearValues;
 
-	// IV. Main.
+	// V. Main.
 
 	vkCmdBeginRenderPass(fd.command_buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
