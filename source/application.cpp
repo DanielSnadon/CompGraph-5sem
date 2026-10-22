@@ -65,15 +65,45 @@ struct UniformBufferObject {
 	alignas(16) glm::vec4 lightColorIntensity;
 };
 
+// [new] struct
+
+struct SceneUniformBufferObject {
+    alignas(16) glm::mat4 viewProjection{1.0f};
+    alignas(16) glm::vec4 cameraPosition{0.0f};
+    alignas(16) glm::vec4 ambientColorIntensity{1.0f, 1.0f, 1.0f, 0.15f};
+	alignas(16) glm::vec4 lightDirection{-0.5f, 1.0f, 0.3f, 0.0f};
+	alignas(16) glm::vec4 lightColorIntensity{1.0f};
+	alignas(16) glm::ivec4 lightCounts{0};
+};
+
+struct ModelUniformBufferObject {
+    alignas(16) glm::mat4 model{1.0f};
+    alignas(16) glm::vec4 color{1.0f};
+    alignas(16) glm::vec4 materialParameters{32.0f, 0.0f, 0.0f, 0.0f};
+    alignas(16) glm::vec4 specularColor{0.8f, 0.8f, 0.8f, 1.0f};
+};
+
 struct PointLight {
 	alignas(16) glm::vec4 position{0.0f, 2.0f, 0.0f, 1.0f};
 	alignas(16) glm::vec4 colorIntensity{1.0f, 1.0f, 1.0f, 1.0f};
+};
+
+struct SpotLight {
+    alignas(16) glm::vec4 position{0.0f, 2.0f, 0.0f, 1.0f};
+    alignas(16) glm::vec4 direction{0.0f, -1.0f, 0.0f, 0.0f};
+    alignas(16) glm::vec4 colorIntensity{1.0f};
+    alignas(16) glm::vec4 coneAnglesDegrees{15.0f, 25.0f, 0.0f, 0.0f};
 };
 
 constexpr uint32_t maxPointLights = 8;
 
 std::array<PointLight, maxPointLights> pointLights{};
 int pointLightCount = 1;
+
+constexpr uint32_t maxSpotLights = 8;
+
+std::array<SpotLight, maxSpotLights> spotLights{};
+int spotLightCount = 1;
 
 // Lab2 be like:
 // + something const
@@ -89,7 +119,7 @@ struct RenderObject {
 
 	VkBuffer uniformBuffer = VK_NULL_HANDLE;
 	VmaAllocation uniformBufferAllocation = nullptr;
-	UniformBufferObject* uniformBufferMemory = nullptr;
+	ModelUniformBufferObject* uniformBufferMemory = nullptr;
 	VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 };
 
@@ -104,6 +134,11 @@ VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
 VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
 VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
 VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
+
+VkDescriptorSetLayout sceneDescriptorSetLayout = VK_NULL_HANDLE;
+VkDescriptorSetLayout modelDescriptorSetLayout = VK_NULL_HANDLE;
+
+VkDescriptorSet sceneDescriptorSet = VK_NULL_HANDLE;
 
 VkShaderModule vertexShader = VK_NULL_HANDLE;
 VkShaderModule fragmentShader = VK_NULL_HANDLE;
@@ -122,9 +157,17 @@ VkBuffer uniformBuffer = VK_NULL_HANDLE;
 VmaAllocation uniformBufferAllocation = nullptr;
 UniformBufferObject* uniformBufferMemory = nullptr;
 
+VkBuffer sceneUniformBuffer = VK_NULL_HANDLE;
+VmaAllocation sceneUniformBufferAllocation = nullptr;
+SceneUniformBufferObject* sceneUniformBufferMemory = nullptr;
+
 VkBuffer pointLightBuffer = VK_NULL_HANDLE;
 VmaAllocation pointLightBufferAllocation = nullptr;
 PointLight* pointLightBufferMemory = nullptr;
+
+VkBuffer spotLightBuffer = VK_NULL_HANDLE;
+VmaAllocation spotLightBufferAllocation = nullptr;
+SpotLight* spotLightBufferMemory = nullptr;
 
 VkShaderModule loadShaderModule(const char path[]) {
 	std::ifstream file(path, std::ios::binary | std::ios::ate);
@@ -343,11 +386,37 @@ bool initialize() {
 	vmaUnmapMemory(context.allocator, indexBufferAllocation);
 	indexBufferMemory = nullptr;
 	
+	// Double Uniform Buffer
+	
+	VkBufferCreateInfo sceneUniformBufferInfo{
+		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+		.size = sizeof(SceneUniformBufferObject),
+		.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+	};
+
+	VmaAllocationCreateInfo sceneUniformAllocationInfo{
+		.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+		.usage = VMA_MEMORY_USAGE_AUTO,
+	};
+
+	if (vmaCreateBuffer(context.allocator, &sceneUniformBufferInfo, &sceneUniformAllocationInfo, &sceneUniformBuffer, &sceneUniformBufferAllocation, nullptr) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось создать uniform buffer сцены.\n";
+		return false;
+	}
+
+	if (vmaMapMemory(context.allocator, sceneUniformBufferAllocation, reinterpret_cast<void**>(&sceneUniformBufferMemory)) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось отобразить память uniform buffer сцены.\n";
+		return false;
+	}
+
 	// Uniform Buffer
 
 	VkBufferCreateInfo uniformBufferInfo{
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-		.size = sizeof(UniformBufferObject),
+		.size = sizeof(ModelUniformBufferObject),
 		.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
 	};
@@ -396,6 +465,32 @@ bool initialize() {
     	return false;
 	}
 
+	// [new] SpotLight
+
+	VkBufferCreateInfo spotLightBufferInfo{
+		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+		.size = sizeof(SpotLight) * maxSpotLights,
+		.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+	};
+
+	VmaAllocationCreateInfo spotLightAllocationInfo{
+		.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+		.usage = VMA_MEMORY_USAGE_AUTO,
+	};
+
+	if (vmaCreateBuffer(context.allocator, &spotLightBufferInfo, &spotLightAllocationInfo, &spotLightBuffer, &spotLightBufferAllocation, nullptr) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось создать spot light buffer.\n";
+		return false;
+	}
+
+	if (vmaMapMemory(context.allocator, spotLightBufferAllocation, reinterpret_cast<void**>(&spotLightBufferMemory)) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось отобразить память spot light buffer.\n";
+		return false;
+	}
+
 	// Descriptor layout
 
 	VkDescriptorSetLayoutBinding uniformLayoutBinding{
@@ -427,6 +522,43 @@ bool initialize() {
 	if (vkCreateDescriptorSetLayout(context.device, &descriptorLayoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)
 	{
 		std::cerr << "Не удалось созать descriptor set layout.\n";
+		return false;
+	}
+
+	VkDescriptorSetLayoutBinding spotLightLayoutBinding{
+		.binding = 2,
+		.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+		.descriptorCount = 1,
+		.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+	};
+
+	VkDescriptorSetLayoutBinding sceneBindings[]{
+		uniformLayoutBinding,
+		pointLightLayoutBinding,
+		spotLightLayoutBinding,
+	};
+
+	VkDescriptorSetLayoutCreateInfo sceneLayoutInfo{
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+		.bindingCount = 3,
+		.pBindings = sceneBindings,
+	};
+
+	if (vkCreateDescriptorSetLayout(context.device, &sceneLayoutInfo, nullptr, &sceneDescriptorSetLayout) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось создать descriptor layout сцены.\n";
+		return false;
+	}
+
+	VkDescriptorSetLayoutCreateInfo modelLayoutInfo{
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+		.bindingCount = 1,
+		.pBindings = &uniformLayoutBinding,
+	};
+
+	if (vkCreateDescriptorSetLayout(context.device, &modelLayoutInfo, nullptr, &modelDescriptorSetLayout) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось создать descriptor layout модели.\n";
 		return false;
 	}
 
@@ -464,7 +596,7 @@ bool initialize() {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 			.descriptorPool = descriptorPool,
 			.descriptorSetCount = 1,
-			.pSetLayouts = &descriptorSetLayout,
+			.pSetLayouts = &modelDescriptorSetLayout,
 		};
 
 		if (vkAllocateDescriptorSets(context.device, &objectSetAllocateInfo, &object.descriptorSet) != VK_SUCCESS)
@@ -476,7 +608,7 @@ bool initialize() {
 		VkDescriptorBufferInfo objectBufferInfo{
 			.buffer = object.uniformBuffer,
 			.offset = 0,
-			.range = sizeof(UniformBufferObject),
+			.range = sizeof(ModelUniformBufferObject),
 		};
 
 		VkWriteDescriptorSet objectDescriptorWrite{
@@ -489,31 +621,79 @@ bool initialize() {
 		};
 
 		vkUpdateDescriptorSets(context.device, 1, &objectDescriptorWrite, 0, nullptr);
+	}
 
-		VkDescriptorBufferInfo pointLightDescriptorInfo{
-			.buffer = pointLightBuffer,
-			.offset = 0,
-			.range = sizeof(PointLight) * maxPointLights,
-		};
+	VkDescriptorSetAllocateInfo sceneSetAllocateInfo{
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+		.descriptorPool = descriptorPool,
+		.descriptorSetCount = 1,
+		.pSetLayouts = &sceneDescriptorSetLayout,
+	};
 
-		VkWriteDescriptorSet pointLightDescriptorWrite{
+	if (vkAllocateDescriptorSets(context.device, &sceneSetAllocateInfo, &sceneDescriptorSet) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось выделить descriptor set сцены.\n";
+		return false;
+	}
+
+	VkDescriptorBufferInfo sceneUniformDescriptorInfo{
+		.buffer = sceneUniformBuffer,
+		.offset = 0,
+		.range = sizeof(SceneUniformBufferObject),
+	};
+
+	VkDescriptorBufferInfo scenePointLightDescriptorInfo{
+		.buffer = pointLightBuffer,
+		.offset = 0,
+		.range = sizeof(PointLight) * maxPointLights,
+	};
+
+	VkDescriptorBufferInfo sceneSpotLightDescriptorInfo{
+		.buffer = spotLightBuffer,
+		.offset = 0,
+		.range = sizeof(SpotLight) * maxSpotLights,
+	};
+
+	VkWriteDescriptorSet sceneWrites[]{
+		{
 			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			.dstSet = object.descriptorSet,
+			.dstSet = sceneDescriptorSet,
+			.dstBinding = 0,
+			.descriptorCount = 1,
+			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			.pBufferInfo = &sceneUniformDescriptorInfo,
+		},
+		{
+			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			.dstSet = sceneDescriptorSet,
 			.dstBinding = 1,
 			.descriptorCount = 1,
 			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			.pBufferInfo = &pointLightDescriptorInfo,
-		};
+			.pBufferInfo = &scenePointLightDescriptorInfo,
+		},
+		{
+			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			.dstSet = sceneDescriptorSet,
+			.dstBinding = 2,
+			.descriptorCount = 1,
+			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.pBufferInfo = &sceneSpotLightDescriptorInfo,
+		},
+	};
 
-		vkUpdateDescriptorSets(context.device, 1, &pointLightDescriptorWrite, 0, nullptr);
-	}
+	vkUpdateDescriptorSets(context.device, 3, sceneWrites, 0, nullptr);
 
 	// Pipeline layout
 
+	const VkDescriptorSetLayout setLayouts[]{
+		sceneDescriptorSetLayout,
+		modelDescriptorSetLayout,
+	};
+
 	VkPipelineLayoutCreateInfo layoutInfo{};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	layoutInfo.setLayoutCount = 1;
-	layoutInfo.pSetLayouts = &descriptorSetLayout;
+	layoutInfo.setLayoutCount = 2;
+	layoutInfo.pSetLayouts = setLayouts;
 
 	if (vkCreatePipelineLayout(graphics::internal::context.device, &layoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
 	{
@@ -679,6 +859,32 @@ void shutdown() {
 	auto& context = graphics::internal::context;
 	vkQueueWaitIdle(context.graphics_queue);
 
+	if (spotLightBufferMemory != nullptr)
+	{
+		vmaUnmapMemory(context.allocator, spotLightBufferAllocation);
+		spotLightBufferMemory = nullptr;
+	}
+
+	if (spotLightBuffer != VK_NULL_HANDLE)
+	{
+		vmaDestroyBuffer(context.allocator, spotLightBuffer, spotLightBufferAllocation);
+		spotLightBuffer = VK_NULL_HANDLE;
+		spotLightBufferAllocation = nullptr;
+	}
+
+	if (sceneUniformBufferMemory != nullptr)
+	{
+		vmaUnmapMemory(context.allocator, sceneUniformBufferAllocation);
+		sceneUniformBufferMemory = nullptr;
+	}
+
+	if (sceneUniformBuffer != VK_NULL_HANDLE)
+	{
+		vmaDestroyBuffer(context.allocator, sceneUniformBuffer, sceneUniformBufferAllocation);
+		sceneUniformBuffer = VK_NULL_HANDLE;
+		sceneUniformBufferAllocation = nullptr;
+	}
+
 	if (pointLightBufferMemory != nullptr)
 	{
 		vmaUnmapMemory(context.allocator, pointLightBufferAllocation);
@@ -708,6 +914,8 @@ void shutdown() {
 	vkDestroyPipeline(context.device, graphicsPipeline, nullptr);
 	vkDestroyPipelineLayout(context.device, pipelineLayout, nullptr);
 
+	vkDestroyDescriptorSetLayout(context.device, sceneDescriptorSetLayout, nullptr);
+	vkDestroyDescriptorSetLayout(context.device, modelDescriptorSetLayout, nullptr);
 	vkDestroyDescriptorSetLayout(context.device, descriptorSetLayout, nullptr);
 
 	vkDestroyShaderModule(context.device, vertexShader, nullptr);
@@ -740,6 +948,31 @@ void update([[maybe_unused]] double time) {
 		ImGui::SliderFloat3("Position", glm::value_ptr(light.position), -5.0f, 5.0f);
 		ImGui::ColorEdit3("Color", glm::value_ptr(light.colorIntensity));
 		ImGui::SliderFloat("Intensity", &light.colorIntensity.w, 0.0f, 10.0f);
+
+		ImGui::Separator();
+		ImGui::PopID();
+	}
+
+	ImGui::End();
+
+	ImGui::Begin("Spot light settings");
+
+	ImGui::SliderInt("Light count", &spotLightCount, 0, static_cast<int>(maxSpotLights));
+
+	for (int i = 0; i < spotLightCount; ++i)
+	{
+		ImGui::PushID(i);
+
+		ImGui::Text("Spot light %d", i + 1);
+
+		SpotLight& light = spotLights[i];
+
+		ImGui::SliderFloat3("Position", glm::value_ptr(light.position), -5.0f, 5.0f);
+		ImGui::SliderFloat3("Direction", glm::value_ptr(light.direction), -1.0f, 1.0f);
+		ImGui::ColorEdit3("Color", glm::value_ptr(light.colorIntensity));
+		ImGui::SliderFloat("Intensity", &light.colorIntensity.w, 0.0f, 10.0f);
+		ImGui::SliderFloat("Inner angle", &light.coneAnglesDegrees.x, 1.0f, light.coneAnglesDegrees.y - 1.0f);
+		ImGui::SliderFloat("Outer angle", &light.coneAnglesDegrees.y, light.coneAnglesDegrees.x + 1.0f, 89.0f);
 
 		ImGui::Separator();
 		ImGui::PopID();
@@ -810,13 +1043,20 @@ void render(const graphics::internal::FrameData& fd) {
 
 	auto& context = graphics::internal::context;
 
-	// [new] I. PointLight
+	// [new] I. PointLight && SpotLight
 
 	const size_t pointLightDataSize = sizeof(PointLight) * maxPointLights;
 	
 	std::memcpy(pointLightBufferMemory, pointLights.data(), pointLightDataSize);
 
 	vmaFlushAllocation(context.allocator, pointLightBufferAllocation, 0, pointLightDataSize);
+
+	const size_t spotLightDataSize =
+    sizeof(SpotLight) * maxSpotLights;
+
+	std::memcpy(spotLightBufferMemory, spotLights.data(), spotLightDataSize);
+
+	vmaFlushAllocation(context.allocator, spotLightBufferAllocation, 0, spotLightDataSize);
 
 	// II. Animation preparation
 
@@ -882,6 +1122,17 @@ void render(const graphics::internal::FrameData& fd) {
 
 	projection[1][1] *= -1.0f;
 
+	// [new] double buffer fillmento
+
+	sceneUniformBufferMemory->viewProjection = projection * view;
+	sceneUniformBufferMemory->cameraPosition = glm::vec4(cameraPosition, 1.0f);
+	sceneUniformBufferMemory->ambientColorIntensity = glm::vec4(1.0f, 1.0f, 1.0f, ambient);
+	sceneUniformBufferMemory->lightDirection = glm::vec4(lightDirection, 0.0f);
+	sceneUniformBufferMemory->lightColorIntensity = glm::vec4(lightColor, lightIntensity);
+	sceneUniformBufferMemory->lightCounts = glm::ivec4(pointLightCount, spotLightCount, 0, 0);
+
+	vmaFlushAllocation(context.allocator, sceneUniformBufferAllocation, 0, sizeof(SceneUniformBufferObject));
+
 	for (RenderObject& object : renderObjects)
 	{
 		glm::mat4 model(1.0f);
@@ -897,16 +1148,11 @@ void render(const graphics::internal::FrameData& fd) {
 		model = glm::scale(model, objectScale * object.scale);
 
 		object.uniformBufferMemory->model = model;
-		object.uniformBufferMemory->view = view;
-		object.uniformBufferMemory->projection = projection;
-		object.uniformBufferMemory->color = objectColor;
-		object.uniformBufferMemory->cameraPosition = glm::vec4(cameraPosition, 1.0f);
-		object.uniformBufferMemory->materialParameters = glm::vec4(shininess, ambient, static_cast<float>(pointLightCount), 0.0f);
+		object.uniformBufferMemory->color = glm::vec4(objectColor, 1.0f);
+		object.uniformBufferMemory->materialParameters = glm::vec4(shininess, 0.0f, 0.0f, 0.0f);
 		object.uniformBufferMemory->specularColor = glm::vec4(specularColor, 1.0f);
-		object.uniformBufferMemory->lightDirection = glm::vec4(lightDirection, 0.0f);
-		object.uniformBufferMemory->lightColorIntensity = glm::vec4(lightColor, lightIntensity);
 
-		vmaFlushAllocation(context.allocator, object.uniformBufferAllocation, 0, sizeof(UniformBufferObject));
+		vmaFlushAllocation(context.allocator, object.uniformBufferAllocation, 0, sizeof(ModelUniformBufferObject));
 	}
 	// IV. Clearance and fill with dark color.
 
@@ -957,7 +1203,9 @@ void render(const graphics::internal::FrameData& fd) {
 
 	for (const RenderObject& object : renderObjects)
 	{
-		vkCmdBindDescriptorSets(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &object.descriptorSet, 0, nullptr);
+		vkCmdBindDescriptorSets(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &object.descriptorSet, 0, nullptr);
+		vkCmdBindDescriptorSets(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &sceneDescriptorSet, 0, nullptr);
+
 		vkCmdDrawIndexed(fd.command_buffer, static_cast<uint32_t>(cylinderIndices.size()), 1, 0, 0, 0);
 	}
 
