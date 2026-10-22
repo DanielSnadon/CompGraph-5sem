@@ -42,6 +42,7 @@ glm::vec3 cameraPosition(2.0f, 1.8f, 2.5f);
 // [new] light const
 float shininess = 32.0f;
 float ambient = 0.15f;
+glm::vec3 ambientColor(1.0f);
 glm::vec3 specularColor(0.8f);
 glm::vec3 lightDirection(-0.5f, 1.0f, 0.3f);
 glm::vec3 lightColor(1.0f);
@@ -53,6 +54,29 @@ struct Vertex {
 	float normal[3];
 };
 
+// [new] markers
+
+const std::array<Vertex, 8> lightMarkerVertices{{
+    {{-0.5f, -0.5f, -0.5f}, {1, 1, 1}, {0, 1, 0}},
+    {{ 0.5f, -0.5f, -0.5f}, {1, 1, 1}, {0, 1, 0}},
+    {{ 0.5f,  0.5f, -0.5f}, {1, 1, 1}, {0, 1, 0}},
+    {{-0.5f,  0.5f, -0.5f}, {1, 1, 1}, {0, 1, 0}},
+    {{-0.5f, -0.5f,  0.5f}, {1, 1, 1}, {0, 1, 0}},
+    {{ 0.5f, -0.5f,  0.5f}, {1, 1, 1}, {0, 1, 0}},
+    {{ 0.5f,  0.5f,  0.5f}, {1, 1, 1}, {0, 1, 0}},
+    {{-0.5f,  0.5f,  0.5f}, {1, 1, 1}, {0, 1, 0}},
+}};
+const std::array<uint32_t, 36> lightMarkerIndices{
+    0, 2, 1,  0, 3, 2,  // -Z
+    4, 5, 6,  4, 6, 7,  // +Z
+    0, 4, 7,  0, 7, 3,  // -X
+    1, 2, 6,  1, 6, 5,  // +X
+    0, 1, 5,  0, 5, 4,  // -Y
+    3, 7, 6,  3, 6, 2,  // +Y
+};
+
+
+// unused?
 struct UniformBufferObject {
 	alignas(16) glm::mat4 model{1.0f};
 	alignas(16) glm::mat4 view{1.0f};
@@ -95,23 +119,6 @@ struct SpotLight {
     alignas(16) glm::vec4 coneAnglesDegrees{15.0f, 25.0f, 0.0f, 0.0f};
 };
 
-constexpr uint32_t maxPointLights = 8;
-
-std::array<PointLight, maxPointLights> pointLights{};
-int pointLightCount = 1;
-
-constexpr uint32_t maxSpotLights = 8;
-
-std::array<SpotLight, maxSpotLights> spotLights{};
-int spotLightCount = 1;
-
-// Lab2 be like:
-// + something const
-// + ImGui sliders
-// + into struct (uniformBuffer)
-// + into shaders
-// + render
-
 struct RenderObject {
 	glm::vec3 position{0.0f};
 	glm::vec3 rotationDegrees{0.0f};
@@ -122,6 +129,26 @@ struct RenderObject {
 	ModelUniformBufferObject* uniformBufferMemory = nullptr;
 	VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 };
+
+constexpr uint32_t maxPointLights = 8;
+
+std::array<PointLight, maxPointLights> pointLights{};
+int pointLightCount = 1;
+
+constexpr uint32_t maxSpotLights = 8;
+
+std::array<SpotLight, maxSpotLights> spotLights{};
+int spotLightCount = 1;
+
+constexpr uint32_t maxLightMarkers = maxPointLights + maxSpotLights;
+std::array<RenderObject, maxLightMarkers> lightMarkers{};
+
+// Lab2 be like:
+// + something const/struct
+// + ImGui sliders
+// + into buffer
+// + into shaders
+// + render
 
 std::array<RenderObject, 3> renderObjects{};
 
@@ -168,6 +195,11 @@ PointLight* pointLightBufferMemory = nullptr;
 VkBuffer spotLightBuffer = VK_NULL_HANDLE;
 VmaAllocation spotLightBufferAllocation = nullptr;
 SpotLight* spotLightBufferMemory = nullptr;
+
+VkBuffer lightMarkerVertexBuffer = VK_NULL_HANDLE;
+VmaAllocation lightMarkerVertexAllocation = nullptr;
+VkBuffer lightMarkerIndexBuffer = VK_NULL_HANDLE;
+VmaAllocation lightMarkerIndexAllocation = nullptr;
 
 VkShaderModule loadShaderModule(const char path[]) {
 	std::ifstream file(path, std::ios::binary | std::ios::ate);
@@ -300,6 +332,8 @@ void generateCylinderGeometry() {
 	}
 
 }
+
+#pragma region Initze
 
 bool initialize() {
 
@@ -440,6 +474,23 @@ bool initialize() {
 		}
 	}
 
+	// [new] Markers
+
+	for (RenderObject& marker : lightMarkers)
+	{
+		if (vmaCreateBuffer(context.allocator, &uniformBufferInfo, &uniformAllocationInfo, &marker.uniformBuffer, &marker.uniformBufferAllocation, nullptr) != VK_SUCCESS)
+		{
+			std::cerr << "Не удалось создать uniform buffer маркера.\n";
+			return false;
+		}
+
+		if (vmaMapMemory(context.allocator, marker.uniformBufferAllocation, reinterpret_cast<void**>(&marker.uniformBufferMemory)) != VK_SUCCESS)
+		{
+			std::cerr << "Не удалось отобразить память маркера.\n";
+			return false;
+		}
+	}
+
 	// [new] PointLight
 
 	VkBufferCreateInfo pointLightBufferInfo{
@@ -490,6 +541,62 @@ bool initialize() {
 		std::cerr << "Не удалось отобразить память spot light buffer.\n";
 		return false;
 	}
+
+	// [new] LightMarker
+		// Vertex
+
+	VmaAllocationCreateInfo markerAllocationInfo{
+		.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+		.usage = VMA_MEMORY_USAGE_AUTO,
+	};
+
+	const size_t markerVertexDataSize = lightMarkerVertices.size() * sizeof(Vertex);
+
+	VkBufferCreateInfo markerVertexBufferInfo{
+		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+		.size = markerVertexDataSize,
+		.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+	};
+
+	VmaAllocationInfo markerVertexMemoryInfo{};
+
+	if (vmaCreateBuffer(context.allocator, &markerVertexBufferInfo, &markerAllocationInfo, &lightMarkerVertexBuffer, &lightMarkerVertexAllocation, &markerVertexMemoryInfo) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось создать vertex buffer маркера.\n";
+		return false;
+	}
+
+	std::memcpy(
+		markerVertexMemoryInfo.pMappedData,
+		lightMarkerVertices.data(),
+		markerVertexDataSize
+	);
+
+	vmaFlushAllocation(context.allocator, lightMarkerVertexAllocation, 0, markerVertexDataSize);
+		
+		// Index
+	
+	const size_t markerIndexDataSize = lightMarkerIndices.size() * sizeof(uint32_t);
+
+	VkBufferCreateInfo markerIndexBufferInfo{
+		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+		.size = markerIndexDataSize,
+		.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+	};
+
+	VmaAllocationInfo markerIndexMemoryInfo{};
+
+	if (vmaCreateBuffer(context.allocator, &markerIndexBufferInfo, &markerAllocationInfo, &lightMarkerIndexBuffer, &lightMarkerIndexAllocation, &markerIndexMemoryInfo) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось создать index buffer маркера.\n";
+		return false;
+	}
+
+	std::memcpy(markerIndexMemoryInfo.pMappedData, lightMarkerIndices.data(), markerIndexDataSize);
+
+	vmaFlushAllocation(context.allocator, lightMarkerIndexAllocation, 0, markerIndexDataSize);
 
 	// Descriptor layout
 
@@ -564,10 +671,12 @@ bool initialize() {
 
 	// Descriptor pool
 
+	const uint32_t descriptorSetCapacity = 1 + static_cast<uint32_t>(renderObjects.size() + lightMarkers.size());
+
 	VkDescriptorPoolSize poolSizes[]{
 		{
 			.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			.descriptorCount = 4,
+			.descriptorCount = descriptorSetCapacity,
 		},
 		{
 			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
@@ -577,7 +686,7 @@ bool initialize() {
 
 	VkDescriptorPoolCreateInfo descriptorPoolInfo{
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-		.maxSets = 4,
+		.maxSets = descriptorSetCapacity,
 		.poolSizeCount = 2,
 		.pPoolSizes = poolSizes,
 	};
@@ -621,6 +730,39 @@ bool initialize() {
 		};
 
 		vkUpdateDescriptorSets(context.device, 1, &objectDescriptorWrite, 0, nullptr);
+	}
+
+	for (RenderObject& marker : lightMarkers)
+	{
+		VkDescriptorSetAllocateInfo markerSetInfo{
+			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+			.descriptorPool = descriptorPool,
+			.descriptorSetCount = 1,
+			.pSetLayouts = &modelDescriptorSetLayout,
+		};
+
+		if (vkAllocateDescriptorSets(context.device, &markerSetInfo, &marker.descriptorSet) != VK_SUCCESS)
+		{
+			std::cerr << "Не удалось выделить descriptor set маркера.\n";
+			return false;
+		}
+
+		VkDescriptorBufferInfo markerBufferInfo{
+			.buffer = marker.uniformBuffer,
+			.offset = 0,
+			.range = sizeof(ModelUniformBufferObject),
+		};
+
+		VkWriteDescriptorSet markerWrite{
+			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			.dstSet = marker.descriptorSet,
+			.dstBinding = 0,
+			.descriptorCount = 1,
+			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			.pBufferInfo = &markerBufferInfo,
+		};
+
+		vkUpdateDescriptorSets(context.device, 1, &markerWrite, 0, nullptr);
 	}
 
 	VkDescriptorSetAllocateInfo sceneSetAllocateInfo{
@@ -855,9 +997,21 @@ bool initialize() {
 	return true;
 }
 
+#pragma endregion
+#pragma region Shdown
+
 void shutdown() {
 	auto& context = graphics::internal::context;
 	vkQueueWaitIdle(context.graphics_queue);
+
+	for (RenderObject& marker : lightMarkers)
+	{
+		vmaUnmapMemory(context.allocator, marker.uniformBufferAllocation);
+		vmaDestroyBuffer(context.allocator, marker.uniformBuffer, marker.uniformBufferAllocation);
+	}
+
+	vmaDestroyBuffer(context.allocator, lightMarkerVertexBuffer, lightMarkerVertexAllocation);
+	vmaDestroyBuffer(context.allocator, lightMarkerIndexBuffer, lightMarkerIndexAllocation);
 
 	if (spotLightBufferMemory != nullptr)
 	{
@@ -921,6 +1075,9 @@ void shutdown() {
 	vkDestroyShaderModule(context.device, vertexShader, nullptr);
 	vkDestroyShaderModule(context.device, fragmentShader, nullptr);
 }
+
+#pragma endregion
+#pragma region Update
 
 void update([[maybe_unused]] double time) {
 
@@ -990,6 +1147,7 @@ void update([[maybe_unused]] double time) {
 	ImGui::ColorEdit3("Specular color", &specularColor.x);
 
 	ImGui::SliderFloat("Ambient strength", &ambient, 0.0f, 1.0f);
+	ImGui::ColorEdit3("Ambient color", glm::value_ptr(ambientColor));
 
 	ImGui::End();
 
@@ -1038,6 +1196,9 @@ void update([[maybe_unused]] double time) {
 		animationPhase = std::fmod(animationPhase, 2.0f * std::numbers::pi_v<float>);
 	}
 }
+
+#pragma endregion
+#pragma region Render
 
 void render(const graphics::internal::FrameData& fd) {
 
@@ -1122,11 +1283,11 @@ void render(const graphics::internal::FrameData& fd) {
 
 	projection[1][1] *= -1.0f;
 
-	// [new] double buffer fillmento
+	// IV. [new] double buffer fillmento
 
 	sceneUniformBufferMemory->viewProjection = projection * view;
 	sceneUniformBufferMemory->cameraPosition = glm::vec4(cameraPosition, 1.0f);
-	sceneUniformBufferMemory->ambientColorIntensity = glm::vec4(1.0f, 1.0f, 1.0f, ambient);
+	sceneUniformBufferMemory->ambientColorIntensity = glm::vec4(ambientColor, ambient);
 	sceneUniformBufferMemory->lightDirection = glm::vec4(lightDirection, 0.0f);
 	sceneUniformBufferMemory->lightColorIntensity = glm::vec4(lightColor, lightIntensity);
 	sceneUniformBufferMemory->lightCounts = glm::ivec4(pointLightCount, spotLightCount, 0, 0);
@@ -1154,6 +1315,42 @@ void render(const graphics::internal::FrameData& fd) {
 
 		vmaFlushAllocation(context.allocator, object.uniformBufferAllocation, 0, sizeof(ModelUniformBufferObject));
 	}
+
+	// (Marker fillmento)
+
+	const int activeMarkerCount = pointLightCount + spotLightCount;
+
+	for (int i = 0; i < activeMarkerCount; ++i)
+	{
+		glm::vec3 markerPosition;
+		glm::vec3 markerColor;
+
+		if (i < pointLightCount)
+		{
+			markerPosition = glm::vec3(pointLights[i].position);
+			markerColor = glm::vec3(pointLights[i].colorIntensity);
+		}
+		else
+		{
+			const int spotIndex = i - pointLightCount;
+
+			markerPosition = glm::vec3(spotLights[spotIndex].position);
+			markerColor = glm::vec3(spotLights[spotIndex].colorIntensity);
+		}
+
+		RenderObject& marker = lightMarkers[i];
+
+		glm::mat4 markerModel = glm::translate(glm::mat4(1.0f), markerPosition);
+		markerModel = glm::scale(markerModel, glm::vec3(0.1f));
+
+		marker.uniformBufferMemory->model = markerModel;
+		marker.uniformBufferMemory->color = glm::vec4(markerColor, 1.0f);
+		marker.uniformBufferMemory->materialParameters = glm::vec4(1.0f, 1.0f, 0.0f, 0.0f);
+		marker.uniformBufferMemory->specularColor = glm::vec4(0.0f);
+
+		vmaFlushAllocation(context.allocator, marker.uniformBufferAllocation, 0, sizeof(ModelUniformBufferObject));
+	}
+
 	// IV. Clearance and fill with dark color.
 
 	vkResetCommandBuffer(fd.command_buffer, 0);
@@ -1209,7 +1406,20 @@ void render(const graphics::internal::FrameData& fd) {
 		vkCmdDrawIndexed(fd.command_buffer, static_cast<uint32_t>(cylinderIndices.size()), 1, 0, 0, 0);
 	}
 
+	vkCmdBindVertexBuffers(fd.command_buffer, 0, 1, &lightMarkerVertexBuffer, &vertexBufferOffset);
+	vkCmdBindIndexBuffer(fd.command_buffer, lightMarkerIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+	for (int i = 0; i < activeMarkerCount; ++i)
+	{
+		const RenderObject& marker = lightMarkers[i];
+
+		vkCmdBindDescriptorSets(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &marker.descriptorSet, 0, nullptr);
+		vkCmdDrawIndexed(fd.command_buffer, static_cast<uint32_t>(lightMarkerIndices.size()), 1, 0, 0, 0);
+	}
+
 	vkCmdEndRenderPass(fd.command_buffer);
 	vkEndCommandBuffer(fd.command_buffer);
 }
 }
+
+#pragma endregion

@@ -50,6 +50,14 @@ layout(set = 0, binding = 2) readonly buffer SpotLightBuffer
 
 void main() {
 
+    // Модель без освещения
+
+    if (object.materialParameters.y > 0.5)
+    {
+        outColor = vec4(inColor, 1.0);
+        return;
+    }
+
     // Цилиндр
 
     vec3 normal = normalize(inNormal);
