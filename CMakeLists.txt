@@ -43,6 +43,12 @@ FetchContent_Declare(
 	GIT_TAG v1.92.9
 )
 
+FetchContent_Declare(
+    lodepng
+    GIT_REPOSITORY https://github.com/lvandeve/lodepng.git
+    GIT_TAG 7735153f542e54e94285dc5c1e7f196b02e15385
+)
+
 find_package(Vulkan REQUIRED)
 find_package(glm CONFIG REQUIRED)
 
@@ -56,6 +62,7 @@ FetchContent_MakeAvailable(
 	vk-bootstrap
 	VulkanMemoryAllocator
 	imgui
+	lodepng
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -75,6 +82,14 @@ target_sources(${PROJECT_NAME} PRIVATE
 	${imgui_SOURCE_DIR}/imgui_tables.cpp
 	${imgui_SOURCE_DIR}/imgui_widgets.cpp
 	${imgui_SOURCE_DIR}/imgui_demo.cpp
+)
+
+target_sources(${PROJECT_NAME} PRIVATE
+    ${lodepng_SOURCE_DIR}/lodepng.cpp
+)
+
+target_include_directories(${PROJECT_NAME} PRIVATE
+    ${lodepng_SOURCE_DIR}
 )
 
 # Compile shaders

@@ -1658,6 +1658,18 @@
 			"value" : ""
 		},
 		{
+			"name" : "FETCHCONTENT_SOURCE_DIR_LODEPNG",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "When not empty, overrides where to find pre-populated content for lodepng"
+				}
+			],
+			"type" : "PATH",
+			"value" : ""
+		},
+		{
 			"name" : "FETCHCONTENT_SOURCE_DIR_VK-BOOTSTRAP",
 			"properties" : 
 			[
@@ -1724,6 +1736,18 @@
 				{
 					"name" : "HELPSTRING",
 					"value" : "Enables UPDATE_DISCONNECTED behavior just for population of imgui"
+				}
+			],
+			"type" : "BOOL",
+			"value" : "OFF"
+		},
+		{
+			"name" : "FETCHCONTENT_UPDATES_DISCONNECTED_LODEPNG",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Enables UPDATE_DISCONNECTED behavior just for population of lodepng"
 				}
 			],
 			"type" : "BOOL",

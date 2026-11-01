@@ -53,7 +53,7 @@ build CMakeFiles/vulkan-starter-app.dir/source/main.cpp.o: CXX_COMPILER__vulkan-
   CONFIG = Debug
   DEP_FILE = CMakeFiles/vulkan-starter-app.dir/source/main.cpp.o.d
   FLAGS = -g -std=gnu++20 -Wall -Wextra -Wno-missing-field-initializers
-  INCLUDES = -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src/backends -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-src/include -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-src/src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-src/include
+  INCLUDES = -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src/backends -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/lodepng-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-src/include -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-src/src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-src/include
   OBJECT_DIR = CMakeFiles/vulkan-starter-app.dir
   OBJECT_FILE_DIR = CMakeFiles/vulkan-starter-app.dir/source
   TARGET_SUPPORT_DIR = CMakeFiles/vulkan-starter-app.dir
@@ -62,7 +62,7 @@ build CMakeFiles/vulkan-starter-app.dir/source/graphics_internal.cpp.o: CXX_COMP
   CONFIG = Debug
   DEP_FILE = CMakeFiles/vulkan-starter-app.dir/source/graphics_internal.cpp.o.d
   FLAGS = -g -std=gnu++20 -Wall -Wextra -Wno-missing-field-initializers
-  INCLUDES = -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src/backends -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-src/include -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-src/src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-src/include
+  INCLUDES = -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src/backends -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/lodepng-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-src/include -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-src/src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-src/include
   OBJECT_DIR = CMakeFiles/vulkan-starter-app.dir
   OBJECT_FILE_DIR = CMakeFiles/vulkan-starter-app.dir/source
   TARGET_SUPPORT_DIR = CMakeFiles/vulkan-starter-app.dir
@@ -71,7 +71,7 @@ build CMakeFiles/vulkan-starter-app.dir/source/application.cpp.o: CXX_COMPILER__
   CONFIG = Debug
   DEP_FILE = CMakeFiles/vulkan-starter-app.dir/source/application.cpp.o.d
   FLAGS = -g -std=gnu++20 -Wall -Wextra -Wno-missing-field-initializers
-  INCLUDES = -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src/backends -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-src/include -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-src/src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-src/include
+  INCLUDES = -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src/backends -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/lodepng-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-src/include -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-src/src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-src/include
   OBJECT_DIR = CMakeFiles/vulkan-starter-app.dir
   OBJECT_FILE_DIR = CMakeFiles/vulkan-starter-app.dir/source
   TARGET_SUPPORT_DIR = CMakeFiles/vulkan-starter-app.dir
@@ -80,7 +80,7 @@ build CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/backends/imgui_impl_glfw
   CONFIG = Debug
   DEP_FILE = CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/backends/imgui_impl_glfw.cpp.o.d
   FLAGS = -g -std=gnu++20 -Wall -Wextra -Wno-missing-field-initializers
-  INCLUDES = -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src/backends -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-src/include -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-src/src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-src/include
+  INCLUDES = -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src/backends -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/lodepng-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-src/include -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-src/src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-src/include
   OBJECT_DIR = CMakeFiles/vulkan-starter-app.dir
   OBJECT_FILE_DIR = CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/backends
   TARGET_SUPPORT_DIR = CMakeFiles/vulkan-starter-app.dir
@@ -89,7 +89,7 @@ build CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/backends/imgui_impl_vulk
   CONFIG = Debug
   DEP_FILE = CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/backends/imgui_impl_vulkan.cpp.o.d
   FLAGS = -g -std=gnu++20 -Wall -Wextra -Wno-missing-field-initializers
-  INCLUDES = -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src/backends -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-src/include -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-src/src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-src/include
+  INCLUDES = -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src/backends -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/lodepng-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-src/include -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-src/src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-src/include
   OBJECT_DIR = CMakeFiles/vulkan-starter-app.dir
   OBJECT_FILE_DIR = CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/backends
   TARGET_SUPPORT_DIR = CMakeFiles/vulkan-starter-app.dir
@@ -98,7 +98,7 @@ build CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/imgui.cpp.o: CXX_COMPILE
   CONFIG = Debug
   DEP_FILE = CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/imgui.cpp.o.d
   FLAGS = -g -std=gnu++20 -Wall -Wextra -Wno-missing-field-initializers
-  INCLUDES = -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src/backends -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-src/include -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-src/src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-src/include
+  INCLUDES = -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src/backends -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/lodepng-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-src/include -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-src/src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-src/include
   OBJECT_DIR = CMakeFiles/vulkan-starter-app.dir
   OBJECT_FILE_DIR = CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src
   TARGET_SUPPORT_DIR = CMakeFiles/vulkan-starter-app.dir
@@ -107,7 +107,7 @@ build CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/imgui_draw.cpp.o: CXX_CO
   CONFIG = Debug
   DEP_FILE = CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/imgui_draw.cpp.o.d
   FLAGS = -g -std=gnu++20 -Wall -Wextra -Wno-missing-field-initializers
-  INCLUDES = -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src/backends -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-src/include -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-src/src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-src/include
+  INCLUDES = -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src/backends -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/lodepng-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-src/include -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-src/src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-src/include
   OBJECT_DIR = CMakeFiles/vulkan-starter-app.dir
   OBJECT_FILE_DIR = CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src
   TARGET_SUPPORT_DIR = CMakeFiles/vulkan-starter-app.dir
@@ -116,7 +116,7 @@ build CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/imgui_tables.cpp.o: CXX_
   CONFIG = Debug
   DEP_FILE = CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/imgui_tables.cpp.o.d
   FLAGS = -g -std=gnu++20 -Wall -Wextra -Wno-missing-field-initializers
-  INCLUDES = -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src/backends -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-src/include -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-src/src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-src/include
+  INCLUDES = -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src/backends -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/lodepng-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-src/include -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-src/src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-src/include
   OBJECT_DIR = CMakeFiles/vulkan-starter-app.dir
   OBJECT_FILE_DIR = CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src
   TARGET_SUPPORT_DIR = CMakeFiles/vulkan-starter-app.dir
@@ -125,7 +125,7 @@ build CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/imgui_widgets.cpp.o: CXX
   CONFIG = Debug
   DEP_FILE = CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/imgui_widgets.cpp.o.d
   FLAGS = -g -std=gnu++20 -Wall -Wextra -Wno-missing-field-initializers
-  INCLUDES = -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src/backends -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-src/include -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-src/src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-src/include
+  INCLUDES = -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src/backends -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/lodepng-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-src/include -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-src/src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-src/include
   OBJECT_DIR = CMakeFiles/vulkan-starter-app.dir
   OBJECT_FILE_DIR = CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src
   TARGET_SUPPORT_DIR = CMakeFiles/vulkan-starter-app.dir
@@ -134,9 +134,18 @@ build CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/imgui_demo.cpp.o: CXX_CO
   CONFIG = Debug
   DEP_FILE = CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/imgui_demo.cpp.o.d
   FLAGS = -g -std=gnu++20 -Wall -Wextra -Wno-missing-field-initializers
-  INCLUDES = -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src/backends -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-src/include -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-src/src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-src/include
+  INCLUDES = -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src/backends -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/lodepng-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-src/include -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-src/src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-src/include
   OBJECT_DIR = CMakeFiles/vulkan-starter-app.dir
   OBJECT_FILE_DIR = CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src
+  TARGET_SUPPORT_DIR = CMakeFiles/vulkan-starter-app.dir
+
+build CMakeFiles/vulkan-starter-app.dir/_deps/lodepng-src/lodepng.cpp.o: CXX_COMPILER__vulkan-starter-app_unscanned_Debug /home/snadon/ComputerGraphics-5sem/build-debug/_deps/lodepng-src/lodepng.cpp || cmake_object_order_depends_target_vulkan-starter-app
+  CONFIG = Debug
+  DEP_FILE = CMakeFiles/vulkan-starter-app.dir/_deps/lodepng-src/lodepng.cpp.o.d
+  FLAGS = -g -std=gnu++20 -Wall -Wextra -Wno-missing-field-initializers
+  INCLUDES = -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src/backends -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/lodepng-src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-src/include -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vk-bootstrap-src/src -I/home/snadon/ComputerGraphics-5sem/build-debug/_deps/vulkanmemoryallocator-src/include
+  OBJECT_DIR = CMakeFiles/vulkan-starter-app.dir
+  OBJECT_FILE_DIR = CMakeFiles/vulkan-starter-app.dir/_deps/lodepng-src
   TARGET_SUPPORT_DIR = CMakeFiles/vulkan-starter-app.dir
 
 
@@ -147,7 +156,7 @@ build CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/imgui_demo.cpp.o: CXX_CO
 #############################################
 # Link the executable vulkan-starter-app
 
-build vulkan-starter-app: CXX_EXECUTABLE_LINKER__vulkan-starter-app_Debug CMakeFiles/vulkan-starter-app.dir/source/main.cpp.o CMakeFiles/vulkan-starter-app.dir/source/graphics_internal.cpp.o CMakeFiles/vulkan-starter-app.dir/source/application.cpp.o CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/backends/imgui_impl_glfw.cpp.o CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/backends/imgui_impl_vulkan.cpp.o CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/imgui.cpp.o CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/imgui_draw.cpp.o CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/imgui_tables.cpp.o CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/imgui_widgets.cpp.o CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/imgui_demo.cpp.o | _deps/glfw-build/src/libglfw3.a /usr/lib64/libvulkan.so _deps/vk-bootstrap-build/libvk-bootstrap.a /usr/lib64/librt.a /usr/lib64/libm.so || _deps/glfw-build/src/libglfw3.a _deps/vk-bootstrap-build/libvk-bootstrap.a shaders
+build vulkan-starter-app: CXX_EXECUTABLE_LINKER__vulkan-starter-app_Debug CMakeFiles/vulkan-starter-app.dir/source/main.cpp.o CMakeFiles/vulkan-starter-app.dir/source/graphics_internal.cpp.o CMakeFiles/vulkan-starter-app.dir/source/application.cpp.o CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/backends/imgui_impl_glfw.cpp.o CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/backends/imgui_impl_vulkan.cpp.o CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/imgui.cpp.o CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/imgui_draw.cpp.o CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/imgui_tables.cpp.o CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/imgui_widgets.cpp.o CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/imgui_demo.cpp.o CMakeFiles/vulkan-starter-app.dir/_deps/lodepng-src/lodepng.cpp.o | _deps/glfw-build/src/libglfw3.a /usr/lib64/libvulkan.so _deps/vk-bootstrap-build/libvk-bootstrap.a /usr/lib64/librt.a /usr/lib64/libm.so || _deps/glfw-build/src/libglfw3.a _deps/vk-bootstrap-build/libvk-bootstrap.a shaders
   CONFIG = Debug
   DEP_FILE = CMakeFiles/vulkan-starter-app.dir/link.d
   FLAGS = -g

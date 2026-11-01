@@ -3,8 +3,10 @@
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inColor;
 layout(location = 2) in vec3 inNormal;
+layout(location = 3) in vec2 inUV;
 layout(location = 1) out vec3 outNormal;
 layout(location = 2) out vec3 outWorldPosition;
+layout(location = 3) out vec2 outUV;
 
 layout(set = 0, binding = 0) uniform SceneUniformBufferObject
 {
@@ -35,4 +37,5 @@ void main()
     outNormal = normalize(mat3(transpose(inverse(object.model))) * inNormal);
 
     outColor = object.color.rgb;
+    outUV = inUV;
 }

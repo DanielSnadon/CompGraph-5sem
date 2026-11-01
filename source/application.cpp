@@ -10,6 +10,7 @@
 #include <cstring>
 #include <cstddef>
 #include <array>
+#include <lodepng.h>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -46,10 +47,28 @@ glm::vec3 lightDirection(-0.5f, 1.0f, 0.3f);
 glm::vec3 lightColor(1.0f);
 float lightIntensity = 1.0f;
 
+// [new] texture const
+
+unsigned textureWidth = 0;
+unsigned textureHeight = 0;
+std::vector<unsigned char> texturePixels;
+
+VkImage textureImage = VK_NULL_HANDLE;
+VmaAllocation textureImageAllocation = nullptr;
+
+// [new] staging buffer && command pool
+
+VkBuffer textureStagingBuffer = VK_NULL_HANDLE;
+VmaAllocation textureStagingAllocation = nullptr;
+
+VkCommandPool uploadCommandPool = VK_NULL_HANDLE;
+VkCommandBuffer uploadCommandBuffer = VK_NULL_HANDLE;
+
 struct Vertex {
 	float position[3];
 	float color[3];
 	float normal[3];
+	float uv[2]{0.0f, 0.0f};
 };
 
 const std::array<Vertex, 8> lightMarkerVertices{{
@@ -134,13 +153,6 @@ constexpr float lightMarkerSize = 0.1f;
 
 bool showVisualization = true;
 
-// Lab2 be like:
-// + something const/struct
-// + ImGui sliders
-// + into buffer
-// + into shaders
-// + render
-
 std::array<RenderObject, 3> renderObjects{};
 
 std::vector<Vertex> cylinderVertices;
@@ -219,15 +231,17 @@ void generateCylinderGeometry() {
 	cylinderVertices.clear();
 	cylinderIndices.clear();
 
-	cylinderVertices.reserve(cylinderSegments * 2 + 2);
+	cylinderVertices.reserve(cylinderSegments * 4 + 4);
 	cylinderIndices.reserve(cylinderSegments * 12);
 
 	constexpr float radius = 0.5f;
 	constexpr float height = 0.7f;
 
-	for (uint32_t i = 0; i < cylinderSegments; ++i)
+	for (uint32_t i = 0; i <= cylinderSegments; ++i)
 	{
 		const float angle = 2.0f * std::numbers::pi_v<float> * float(i) / float(cylinderSegments);
+
+		const float u = float(i) / float(cylinderSegments);
 
 		const float red = 0.5f + 0.5f * std::sin(angle);
 		const float green = 0.5f + 0.5f * std::sin(angle + 2.0f * std::numbers::pi_v<float> / 3.0f);
@@ -240,12 +254,14 @@ void generateCylinderGeometry() {
 			.position = {x, -height, z},
 			.color = {red, green, blue},
 			.normal = {std::cos(angle), 0.0f, std::sin(angle)},
+			.uv = {u, 1.0f},
 		});
 
 		cylinderVertices.push_back({
 			.position = {x, height, z},
 			.color = {red, green, blue},
 			.normal = {std::cos(angle), 0.0f, std::sin(angle)},
+			.uv = {u, 0.0f},
 		});
 	}
 
@@ -253,15 +269,17 @@ void generateCylinderGeometry() {
 		.position = {0.0f, -height, 0.0f},
 		.color = {0.5f, 0.5f, 0.5f},
 		.normal = {0.0f, -1.0f, 0.0f},
+		.uv = {0.5f, 0.5f},
 	});
 
 	cylinderVertices.push_back({
 		.position = {0.0f, height, 0.0f},
 		.color = {0.5f, 0.5f, 0.5f},
 		.normal = {0.0f, 1.0f, 0.0f},
+		.uv = {0.5f, 0.5f},
 	});
 
-	const uint32_t bottomCenter = cylinderSegments * 2;
+	const uint32_t bottomCenter = (cylinderSegments + 1) * 2;
 	const uint32_t topCenter = bottomCenter + 1;
 
 	const uint32_t capStart = static_cast<uint32_t>(cylinderVertices.size());
@@ -276,17 +294,21 @@ void generateCylinderGeometry() {
 		
 		const float x = radius * std::cos(angle);
 		const float z = radius * std::sin(angle);
+		const float u = 0.5f + x / (2.0f * radius);
+		const float v = 0.5f - z / (2.0f * radius);
 
 		cylinderVertices.push_back({
 			.position = {x, -height, z},
 			.color = {red, green, blue},
 			.normal = {0.0f, -1.0f, 0.0f},
+			.uv = {u, v},
 		});
 
 		cylinderVertices.push_back({
 			.position = {x, height, z},
 			.color = {red, green, blue},
 			.normal = {0.0f, 1.0f, 0.0f},
+			.uv = {u,v},
 		});
 	}
 
@@ -297,7 +319,7 @@ void generateCylinderGeometry() {
 		const uint32_t bottom = i * 2;
 		const uint32_t top = bottom + 1;
 
-		const uint32_t nextBottom = next * 2;
+		const uint32_t nextBottom = (i + 1) * 2;
 		const uint32_t nextTop = nextBottom + 1;
 
 		const uint32_t bottomCap = capStart + i * 2;
@@ -322,6 +344,14 @@ void generateCylinderGeometry() {
 
 bool initialize() {
 
+	// [new] Load texture
+
+	if (lodepng::decode(texturePixels, textureWidth, textureHeight, "textures/albedo.png", LCT_RGBA, 8))
+	{
+		std::cerr << "Ошибка: не удалось загрузить текстуру.\n";
+		return false;
+	}
+
 	// Cylinder(s?)
 
 	generateCylinderGeometry();
@@ -335,9 +365,220 @@ bool initialize() {
 		object.scale = glm::vec3(0.55f);
 	}
 
-	// Vertex Buffer
-
 	auto& context = graphics::internal::context;
+
+	// [new] Texture
+
+	VkImageCreateInfo textureImageInfo{
+		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+		.imageType = VK_IMAGE_TYPE_2D,
+		.format = VK_FORMAT_R8G8B8A8_UNORM,
+		.extent = {textureWidth, textureHeight, 1},
+		.mipLevels = 1,
+		.arrayLayers = 1,
+		.samples = VK_SAMPLE_COUNT_1_BIT,
+		.tiling = VK_IMAGE_TILING_OPTIMAL,
+		.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+	};
+
+	VmaAllocationCreateInfo textureAllocationInfo{
+		.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+		.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+	};
+
+	if (vmaCreateImage(context.allocator, &textureImageInfo, &textureAllocationInfo, &textureImage, &textureImageAllocation, nullptr) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось создать изображение текстуры.\n";
+		return false;
+	}
+
+	const VkDeviceSize textureDataSize = texturePixels.size();
+
+	// [new] Staging Buffer
+	
+	VkBufferCreateInfo stagingBufferInfo{
+		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+		.size = textureDataSize,
+		.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+	};
+
+	VmaAllocationCreateInfo stagingAllocationInfo{
+		.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+		.usage = VMA_MEMORY_USAGE_AUTO,
+	};
+
+	VmaAllocationInfo stagingMemoryInfo{};
+
+	if (vmaCreateBuffer(context.allocator, &stagingBufferInfo, &stagingAllocationInfo, &textureStagingBuffer, &textureStagingAllocation, &stagingMemoryInfo) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось создать staging buffer для текстуры.\n";
+		return false;
+	}
+
+	std::memcpy(stagingMemoryInfo.pMappedData, texturePixels.data(), texturePixels.size());
+
+	vmaFlushAllocation(context.allocator, textureStagingAllocation, 0, textureDataSize);
+
+	// [new] Command pool&buffer
+
+	VkCommandPoolCreateInfo uploadPoolInfo{
+		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+		.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+		.queueFamilyIndex = context.graphics_queue_index,
+	};
+
+	if (vkCreateCommandPool(context.device, &uploadPoolInfo, nullptr, &uploadCommandPool) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось создать command pool загрузки.\n";
+		return false;
+	}
+
+	VkCommandBufferAllocateInfo uploadCommandInfo{
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+		.commandPool = uploadCommandPool,
+		.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+		.commandBufferCount = 1,
+	};
+
+	if (vkAllocateCommandBuffers(context.device, &uploadCommandInfo, &uploadCommandBuffer) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось выделить command buffer загрузки.\n";
+		return false;
+	}
+
+	VkCommandBufferBeginInfo uploadBeginInfo{
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+	};
+
+	if (vkBeginCommandBuffer(uploadCommandBuffer, &uploadBeginInfo) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось начать запись команд загрузки.\n";
+		return false;
+	}
+
+	// [new] Barrier 1: Undefined -> Transfer_dst_optimal
+
+	VkImageMemoryBarrier textureToTransfer{
+		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+		.srcAccessMask = 0,
+		.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+		.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+		.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+		.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+		.image = textureImage,
+		.subresourceRange = {
+			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+			.baseMipLevel = 0,
+			.levelCount = 1,
+			.baseArrayLayer = 0,
+			.layerCount = 1,
+		},
+	};
+
+	vkCmdPipelineBarrier(uploadCommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &textureToTransfer);
+
+	VkBufferImageCopy textureCopyRegion{
+		.bufferOffset = 0,
+		.bufferRowLength = 0,
+		.bufferImageHeight = 0,
+		.imageSubresource = {
+			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+			.mipLevel = 0,
+			.baseArrayLayer = 0,
+			.layerCount = 1,
+		},
+		.imageOffset = {0, 0, 0},
+		.imageExtent = {textureWidth, textureHeight, 1},
+	};
+
+	vkCmdCopyBufferToImage(uploadCommandBuffer, textureStagingBuffer, textureImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &textureCopyRegion);
+
+	// [new] Barrier 2: Transfer_dst_optimal -> Shader_read_only_optimal
+
+	VkImageMemoryBarrier textureToShaderRead{
+		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+		.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+		.dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+		.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+		.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+		.image = textureImage,
+		.subresourceRange = {
+			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+			.baseMipLevel = 0,
+			.levelCount = 1,
+			.baseArrayLayer = 0,
+			.layerCount = 1,
+		},
+	};
+
+	vkCmdPipelineBarrier(uploadCommandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &textureToShaderRead);
+
+	if (vkEndCommandBuffer(uploadCommandBuffer) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось завершить запись команд загрузки.\n";
+		return false;
+	}
+
+	VkFence uploadFence = VK_NULL_HANDLE;
+	VkFenceCreateInfo uploadFenceInfo{
+		.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+	};
+	if (vkCreateFence(context.device, &uploadFenceInfo, nullptr, &uploadFence) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось создать fence загрузки.\n";
+		return false;
+	}
+
+	// [new] Sending&waiting command buffer...
+
+	VkSubmitInfo uploadSubmitInfo{
+		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+		.commandBufferCount = 1,
+		.pCommandBuffers = &uploadCommandBuffer,
+	};
+
+	if (vkQueueSubmit(context.graphics_queue, 1, &uploadSubmitInfo, uploadFence) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось отправить команды загрузки.\n";
+
+		vkDestroyFence(context.device, uploadFence, nullptr);
+		return false;
+	}
+
+	VkSubmitInfo uploadSubmitInfo{
+		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+		.commandBufferCount = 1,
+		.pCommandBuffers = &uploadCommandBuffer,
+	};
+
+	if (vkQueueSubmit(context.graphics_queue, 1, &uploadSubmitInfo, uploadFence) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось отправить команды загрузки.\n";
+
+		vkDestroyFence(context.device, uploadFence, nullptr);
+		return false;
+	}
+
+	if (vkWaitForFences(context.device, 1, &uploadFence, VK_TRUE, UINT64_MAX) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось дождаться завершения загрузки.\n";
+		return false;
+	}
+
+	vkDestroyFence(context.device, uploadFence, nullptr);
+	vmaDestroyBuffer(context.allocator, textureStagingBuffer, textureStagingAllocation);
+
+	textureStagingBuffer = VK_NULL_HANDLE;
+	textureStagingAllocation = nullptr;
+
+	// Vertex Buffer
 
 	const size_t vertexDataSize = cylinderVertices.size() * sizeof(Vertex);
 
@@ -880,7 +1121,7 @@ bool initialize() {
 		.inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
 	};
 
-	VkVertexInputAttributeDescription vertexAttributes[3]{
+	VkVertexInputAttributeDescription vertexAttributes[4]{
 		{
 			.location = 0,
 			.binding = 0,
@@ -898,7 +1139,13 @@ bool initialize() {
 			.binding = 0,
 			.format = VK_FORMAT_R32G32B32_SFLOAT,
 			.offset = offsetof(Vertex, normal),
-		}
+		},
+		{
+			.location = 3,
+			.binding = 0,
+			.format = VK_FORMAT_R32G32_SFLOAT,
+			.offset = offsetof(Vertex, uv),
+		},
 	};
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
@@ -907,7 +1154,7 @@ bool initialize() {
 	vertexInputInfo.vertexBindingDescriptionCount = 1;
 	vertexInputInfo.pVertexBindingDescriptions = &vertexBinding;
 
-	vertexInputInfo.vertexAttributeDescriptionCount = 3;
+	vertexInputInfo.vertexAttributeDescriptionCount = 4;
 	vertexInputInfo.pVertexAttributeDescriptions = vertexAttributes;
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo{};
@@ -947,10 +1194,7 @@ bool initialize() {
 	// Color blending
 
 	VkPipelineColorBlendAttachmentState colorAttachment{};
-	colorAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
-										VK_COLOR_COMPONENT_G_BIT |
-										VK_COLOR_COMPONENT_B_BIT |
-										VK_COLOR_COMPONENT_A_BIT;
+	colorAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 	colorAttachment.blendEnable = VK_FALSE;
 
 	VkPipelineColorBlendStateCreateInfo blendInfo{};
@@ -1017,6 +1261,21 @@ bool initialize() {
 void shutdown() {
 	auto& context = graphics::internal::context;
 	vkQueueWaitIdle(context.graphics_queue);
+
+	vkDestroyCommandPool(context.device, uploadCommandPool, nullptr);
+
+	if (textureStagingBuffer != VK_NULL_HANDLE)
+	{
+		vmaDestroyBuffer(context.allocator, textureStagingBuffer, textureStagingAllocation);
+	}
+
+	if (textureImage != VK_NULL_HANDLE)
+	{
+		vmaDestroyImage(context.allocator, textureImage, textureImageAllocation);
+
+		textureImage = VK_NULL_HANDLE;
+		textureImageAllocation = nullptr;
+	}
 
 	vmaDestroyBuffer(context.allocator, spotLineVertexBuffer, spotLineVertexAllocation);
 

@@ -310,6 +310,10 @@ FETCHCONTENT_SOURCE_DIR_GLM:PATH=
 FETCHCONTENT_SOURCE_DIR_IMGUI:PATH=
 
 //When not empty, overrides where to find pre-populated content
+// for lodepng
+FETCHCONTENT_SOURCE_DIR_LODEPNG:PATH=
+
+//When not empty, overrides where to find pre-populated content
 // for vk-bootstrap
 FETCHCONTENT_SOURCE_DIR_VK-BOOTSTRAP:PATH=
 
@@ -328,6 +332,9 @@ FETCHCONTENT_UPDATES_DISCONNECTED_GLM:BOOL=OFF
 
 //Enables UPDATE_DISCONNECTED behavior just for population of imgui
 FETCHCONTENT_UPDATES_DISCONNECTED_IMGUI:BOOL=OFF
+
+//Enables UPDATE_DISCONNECTED behavior just for population of lodepng
+FETCHCONTENT_UPDATES_DISCONNECTED_LODEPNG:BOOL=OFF
 
 //Enables UPDATE_DISCONNECTED behavior just for population of vk-bootstrap
 FETCHCONTENT_UPDATES_DISCONNECTED_VK-BOOTSTRAP:BOOL=OFF

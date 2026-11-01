@@ -36,7 +36,7 @@
 			{
 				"command" : 1,
 				"file" : 0,
-				"line" : 61,
+				"line" : 68,
 				"parent" : 0
 			},
 			{
@@ -57,7 +57,7 @@
 			{
 				"command" : 2,
 				"file" : 0,
-				"line" : 107,
+				"line" : 122,
 				"parent" : 0
 			},
 			{
@@ -69,13 +69,25 @@
 			{
 				"command" : 4,
 				"file" : 0,
-				"line" : 69,
+				"line" : 76,
+				"parent" : 0
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 91,
 				"parent" : 0
 			},
 			{
 				"command" : 5,
 				"file" : 0,
-				"line" : 70,
+				"line" : 77,
+				"parent" : 0
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 87,
 				"parent" : 0
 			}
 		]
@@ -140,6 +152,10 @@
 					"path" : "/home/snadon/ComputerGraphics-5sem/build-debug/_deps/imgui-src/backends"
 				},
 				{
+					"backtrace" : 9,
+					"path" : "/home/snadon/ComputerGraphics-5sem/build-debug/_deps/lodepng-src"
+				},
+				{
 					"backtrace" : 2,
 					"path" : "/home/snadon/ComputerGraphics-5sem/build-debug/_deps/glfw-src/include"
 				},
@@ -172,7 +188,8 @@
 				6,
 				7,
 				8,
-				9
+				9,
+				10
 			]
 		}
 	],
@@ -292,7 +309,8 @@
 				6,
 				7,
 				8,
-				9
+				9,
+				10
 			]
 		}
 	],
@@ -317,45 +335,51 @@
 			"sourceGroupIndex" : 0
 		},
 		{
-			"backtrace" : 9,
+			"backtrace" : 10,
 			"compileGroupIndex" : 0,
 			"path" : "build-debug/_deps/imgui-src/backends/imgui_impl_glfw.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
-			"backtrace" : 9,
+			"backtrace" : 10,
 			"compileGroupIndex" : 0,
 			"path" : "build-debug/_deps/imgui-src/backends/imgui_impl_vulkan.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
-			"backtrace" : 9,
+			"backtrace" : 10,
 			"compileGroupIndex" : 0,
 			"path" : "build-debug/_deps/imgui-src/imgui.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
-			"backtrace" : 9,
+			"backtrace" : 10,
 			"compileGroupIndex" : 0,
 			"path" : "build-debug/_deps/imgui-src/imgui_draw.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
-			"backtrace" : 9,
+			"backtrace" : 10,
 			"compileGroupIndex" : 0,
 			"path" : "build-debug/_deps/imgui-src/imgui_tables.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
-			"backtrace" : 9,
+			"backtrace" : 10,
 			"compileGroupIndex" : 0,
 			"path" : "build-debug/_deps/imgui-src/imgui_widgets.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
-			"backtrace" : 9,
+			"backtrace" : 10,
 			"compileGroupIndex" : 0,
 			"path" : "build-debug/_deps/imgui-src/imgui_demo.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 11,
+			"compileGroupIndex" : 0,
+			"path" : "build-debug/_deps/lodepng-src/lodepng.cpp",
 			"sourceGroupIndex" : 0
 		}
 	],

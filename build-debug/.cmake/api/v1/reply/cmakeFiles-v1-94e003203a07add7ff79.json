@@ -305,6 +305,26 @@
 			"path" : "/usr/share/cmake/Modules/FetchContent/CMakeLists.cmake.in"
 		},
 		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/usr/share/cmake/Modules/FindGit.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/usr/share/cmake/Modules/FindPackageHandleStandardArgs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/usr/share/cmake/Modules/FindPackageMessage.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/usr/share/cmake/Modules/FetchContent/CMakeLists.cmake.in"
+		},
+		{
 			"isGenerated" : true,
 			"path" : "build-debug/_deps/glfw-src/CMakeLists.txt"
 		},
