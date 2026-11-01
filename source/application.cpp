@@ -33,13 +33,11 @@ glm::vec3 objectRotationDegrees{0.0f, 0.0f, 0.0f};
 glm::vec3 objectScale{1.0f, 1.0f, 1.0f};
 int perspectiveProjection = 1;
 
-// [new] camera const
 float cameraFOV = 45.0f;
 float cameraYaw = -130.0f;
 float cameraPitch = -30.0f;
 glm::vec3 cameraPosition(2.0f, 1.8f, 2.5f);
 
-// [new] light const
 float shininess = 32.0f;
 float ambient = 0.15f;
 glm::vec3 ambientColor(1.0f);
@@ -53,8 +51,6 @@ struct Vertex {
 	float color[3];
 	float normal[3];
 };
-
-// [new] markers
 
 const std::array<Vertex, 8> lightMarkerVertices{{
     {{-0.5f, -0.5f, -0.5f}, {1, 1, 1}, {0, 1, 0}},
@@ -74,21 +70,6 @@ const std::array<uint32_t, 36> lightMarkerIndices{
     0, 1, 5,  0, 5, 4,  // -Y
     3, 7, 6,  3, 6, 2,  // +Y
 };
-
-// unused.
-// struct UniformBufferObject {
-// 	alignas(16) glm::mat4 model{1.0f};
-// 	alignas(16) glm::mat4 view{1.0f};
-// 	alignas(16) glm::mat4 projection{1.0f};
-// 	alignas(16) glm::vec3 color{1.0f, 1.0f, 1.0f};
-// 	alignas(16) glm::vec4 cameraPosition;
-// 	alignas(16) glm::vec4 materialParameters;
-// 	alignas(16) glm::vec4 specularColor;
-// 	alignas(16) glm::vec4 lightDirection;
-// 	alignas(16) glm::vec4 lightColorIntensity;
-// };
-
-// [new] struct
 
 struct SceneUniformBufferObject {
     alignas(16) glm::mat4 viewProjection{1.0f};
@@ -282,8 +263,6 @@ void generateCylinderGeometry() {
 
 	const uint32_t bottomCenter = cylinderSegments * 2;
 	const uint32_t topCenter = bottomCenter + 1;
-
-	// [new] новые точки для оснований
 
 	const uint32_t capStart = static_cast<uint32_t>(cylinderVertices.size());
 
@@ -480,7 +459,7 @@ bool initialize() {
 		}
 	}
 
-	// [new] Markers
+	// Markers
 
 	for (RenderObject& marker : lightMarkers)
 	{
@@ -497,7 +476,7 @@ bool initialize() {
 		}
 	}
 
-	// [new] PointLight
+	// PointLight
 
 	VkBufferCreateInfo pointLightBufferInfo{
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -522,7 +501,7 @@ bool initialize() {
     	return false;
 	}
 
-	// [new] SpotLight
+	// SpotLight
 
 	VkBufferCreateInfo spotLightBufferInfo{
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -548,7 +527,7 @@ bool initialize() {
 		return false;
 	}
 
-	// [new] LightMarker
+	// LightMarker
 		// Vertex
 
 	VmaAllocationCreateInfo markerAllocationInfo{
@@ -1013,15 +992,13 @@ bool initialize() {
 	pipelineInfo.renderPass = graphics::internal::context.render_pass;
 	pipelineInfo.subpass = 0;
 
-	// The pipeline
+	// The pipelines
 
 	if (vkCreateGraphicsPipelines(graphics::internal::context.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS)
 	{
 		std::cerr << "Не удалось создать графический pipeline.\n";
 		return false;
 	}
-
-	// [new] LIGHT-LINE PIPELINE
 
 	inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
 
@@ -1255,7 +1232,7 @@ void render(const graphics::internal::FrameData& fd) {
 
 	auto& context = graphics::internal::context;
 
-	// [new] I. PointLight && SpotLight
+	// I. PointLight && SpotLight
 
 	const size_t pointLightDataSize = sizeof(PointLight) * maxPointLights;
 	
@@ -1290,7 +1267,7 @@ void render(const graphics::internal::FrameData& fd) {
 
 	const float aspect = static_cast<float>(context.swapchain_extent.width) / static_cast<float>(context.swapchain_extent.height);
 	
-	// [new] camera settings!
+	// Camera settings!
 
 	const float yaw = glm::radians(cameraYaw);
 	const float pitch = glm::radians(cameraPitch);
@@ -1334,7 +1311,7 @@ void render(const graphics::internal::FrameData& fd) {
 
 	projection[1][1] *= -1.0f;
 
-	// IV. [new] double buffer fillmento
+	// IV. double buffer fillmento
 
 	sceneUniformBufferMemory->viewProjection = projection * view;
 	sceneUniformBufferMemory->cameraPosition = glm::vec4(cameraPosition, 1.0f);

@@ -20,7 +20,6 @@ layout(set = 1, binding = 0) uniform ModelUniformBufferObject
     mat4 model;
     vec4 color;
     vec4 materialParameters;
-    // x - яркость блика
     vec4 specularColor;
 } object;
 

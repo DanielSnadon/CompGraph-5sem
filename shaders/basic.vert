@@ -35,5 +35,4 @@ void main()
     outNormal = normalize(mat3(transpose(inverse(object.model))) * inNormal);
 
     outColor = object.color.rgb;
-    // outColor = inColor * ubo.color.rgb;
 }
