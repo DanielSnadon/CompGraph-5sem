@@ -52,7 +52,6 @@ float lightIntensity = 1.0f;
 unsigned textureWidth = 0;
 unsigned textureHeight = 0;
 std::vector<unsigned char> texturePixels;
-
 VkImage textureImage = VK_NULL_HANDLE;
 VmaAllocation textureImageAllocation = nullptr;
 
@@ -60,14 +59,20 @@ VmaAllocation textureImageAllocation = nullptr;
 
 VkBuffer textureStagingBuffer = VK_NULL_HANDLE;
 VmaAllocation textureStagingAllocation = nullptr;
-
 VkCommandPool uploadCommandPool = VK_NULL_HANDLE;
 VkCommandBuffer uploadCommandBuffer = VK_NULL_HANDLE;
 
-// [new] imageView&Sampler const'
+// [new] imageView&Sampler const
 
 VkImageView textureImageView = VK_NULL_HANDLE;
 VkSampler textureSampler = VK_NULL_HANDLE;
+
+// [new] dynamic uniform buffer const
+
+VkBuffer modelUniformBuffer = VK_NULL_HANDLE;
+VmaAllocation modelUniformBufferAllocation = nullptr;
+unsigned char* modelUniformBufferMemory = nullptr;
+VkDeviceSize modelUniformStride = 0;
 
 struct Vertex {
 	float position[3];
@@ -127,6 +132,7 @@ struct RenderObject {
 	glm::vec3 position{0.0f};
 	glm::vec3 rotationDegrees{0.0f};
 	glm::vec3 scale{1.0f};
+	uint32_t uniformBufferOffset = 0;
 
 	VkBuffer uniformBuffer = VK_NULL_HANDLE;
 	VmaAllocation uniformBufferAllocation = nullptr;
@@ -371,6 +377,40 @@ bool initialize() {
 	}
 
 	auto& context = graphics::internal::context;
+
+	// [new] Dynamic buffer
+
+	VkPhysicalDeviceProperties deviceProperties{};
+	vkGetPhysicalDeviceProperties(context.physical_device, &deviceProperties);
+	const VkDeviceSize alignment = deviceProperties.limits.minUniformBufferOffsetAlignment;
+
+	modelUniformStride = ((sizeof(ModelUniformBufferObject) + alignment - 1) / alignment) * alignment;
+
+	const VkDeviceSize modelRecordCount = renderObjects.size() + lightMarkers.size();
+
+	VkBufferCreateInfo modelBufferInfo{
+		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+		.size = modelUniformStride * modelRecordCount,
+		.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+	};
+
+	VmaAllocationCreateInfo modelAllocationInfo{
+		.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+		.usage = VMA_MEMORY_USAGE_AUTO,
+	};
+
+	if (vmaCreateBuffer(context.allocator, &modelBufferInfo, &modelAllocationInfo, &modelUniformBuffer, &modelUniformBufferAllocation, nullptr) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось создать общий буфер моделей.\n";
+		return false;
+	}
+
+	if (vmaMapMemory(context.allocator, modelUniformBufferAllocation, reinterpret_cast<void**>(&modelUniformBufferMemory)) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось отобразить память общего буфера моделей.\n";
+		return false;
+	}
 
 	// [new] Texture
 
@@ -717,35 +757,20 @@ bool initialize() {
 		.usage = VMA_MEMORY_USAGE_AUTO,
 	};
 
+	uint32_t modelRecordIndex = 0;
+
 	for (RenderObject& object : renderObjects)
 	{
-		if (vmaCreateBuffer(context.allocator, &uniformBufferInfo, &uniformAllocationInfo, &object.uniformBuffer, &object.uniformBufferAllocation, nullptr) != VK_SUCCESS)
-		{
-			std::cerr << "Не удалось создать uniform buffer.\n";
-			return false;
-		}
-		if (vmaMapMemory(context.allocator, object.uniformBufferAllocation, reinterpret_cast<void**>(&object.uniformBufferMemory)) != VK_SUCCESS)
-		{
-			std::cerr << "Не удалось отобразить uniform buffer память.\n";
-			return false;
-		}
+		object.uniformBufferOffset = static_cast<uint32_t>(modelUniformStride * modelRecordIndex);
+		object.uniformBufferMemory = reinterpret_cast<ModelUniformBufferObject*>(modelUniformBufferMemory + object.uniformBufferOffset);
+		++modelRecordIndex;
 	}
-
-	// Markers
 
 	for (RenderObject& marker : lightMarkers)
 	{
-		if (vmaCreateBuffer(context.allocator, &uniformBufferInfo, &uniformAllocationInfo, &marker.uniformBuffer, &marker.uniformBufferAllocation, nullptr) != VK_SUCCESS)
-		{
-			std::cerr << "Не удалось создать uniform buffer маркера.\n";
-			return false;
-		}
-
-		if (vmaMapMemory(context.allocator, marker.uniformBufferAllocation, reinterpret_cast<void**>(&marker.uniformBufferMemory)) != VK_SUCCESS)
-		{
-			std::cerr << "Не удалось отобразить память маркера.\n";
-			return false;
-		}
+		marker.uniformBufferOffset = static_cast<uint32_t>(modelUniformStride * modelRecordIndex);
+		marker.uniformBufferMemory = reinterpret_cast<ModelUniformBufferObject*>(modelUniformBufferMemory + marker.uniformBufferOffset);
+		++modelRecordIndex;
 	}
 
 	// PointLight
@@ -942,8 +967,12 @@ bool initialize() {
 		.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
 	};
 
+	VkDescriptorSetLayoutBinding modelUniformLayoutBinding = uniformLayoutBinding;
+
+	modelUniformLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+
 	VkDescriptorSetLayoutBinding modelBindings[]{
-		uniformLayoutBinding,
+		modelUniformLayoutBinding,
 		albedoLayoutBinding,
 	};
 
@@ -976,12 +1005,16 @@ bool initialize() {
 			.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 			.descriptorCount = descriptorSetCapacity,
 		},
+		{
+			.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+			.descriptorCount = static_cast<uint32_t>(renderObjects.size() + lightMarkers.size()),
+		},
 	};
 
 	VkDescriptorPoolCreateInfo descriptorPoolInfo{
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 		.maxSets = descriptorSetCapacity,
-		.poolSizeCount = 3,
+		.poolSizeCount = 4,
 		.pPoolSizes = poolSizes,
 	};
 
@@ -1015,7 +1048,7 @@ bool initialize() {
 		}
 
 		VkDescriptorBufferInfo objectBufferInfo{
-			.buffer = object.uniformBuffer,
+			.buffer = modelUniformBuffer,
 			.offset = 0,
 			.range = sizeof(ModelUniformBufferObject),
 		};
@@ -1025,7 +1058,7 @@ bool initialize() {
 			.dstSet = object.descriptorSet,
 			.dstBinding = 0,
 			.descriptorCount = 1,
-			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
 			.pBufferInfo = &objectBufferInfo,
 		};
 
@@ -1059,7 +1092,7 @@ bool initialize() {
 		}
 
 		VkDescriptorBufferInfo markerBufferInfo{
-			.buffer = marker.uniformBuffer,
+			.buffer = modelUniformBuffer,
 			.offset = 0,
 			.range = sizeof(ModelUniformBufferObject),
 		};
@@ -1069,7 +1102,7 @@ bool initialize() {
 			.dstSet = marker.descriptorSet,
 			.dstBinding = 0,
 			.descriptorCount = 1,
-			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
 			.pBufferInfo = &markerBufferInfo,
 		};
 
@@ -1337,6 +1370,23 @@ void shutdown() {
 	auto& context = graphics::internal::context;
 	vkQueueWaitIdle(context.graphics_queue);
 
+	if (modelUniformBufferMemory != nullptr)
+	{
+		vmaUnmapMemory(context.allocator, modelUniformBufferAllocation);
+		modelUniformBufferMemory = nullptr;
+	}
+
+	if (modelUniformBuffer != VK_NULL_HANDLE)
+	{
+		vmaDestroyBuffer(
+			context.allocator,
+			modelUniformBuffer,
+			modelUniformBufferAllocation);
+
+		modelUniformBuffer = VK_NULL_HANDLE;
+		modelUniformBufferAllocation = nullptr;
+	}
+
 	vkDestroySampler(context.device, textureSampler, nullptr);
 	vkDestroyImageView(context.device, textureImageView, nullptr);
 
@@ -1356,12 +1406,6 @@ void shutdown() {
 	}
 
 	vmaDestroyBuffer(context.allocator, spotLineVertexBuffer, spotLineVertexAllocation);
-
-	for (RenderObject& marker : lightMarkers)
-	{
-		vmaUnmapMemory(context.allocator, marker.uniformBufferAllocation);
-		vmaDestroyBuffer(context.allocator, marker.uniformBuffer, marker.uniformBufferAllocation);
-	}
 
 	vmaDestroyBuffer(context.allocator, lightMarkerVertexBuffer, lightMarkerVertexAllocation);
 	vmaDestroyBuffer(context.allocator, lightMarkerIndexBuffer, lightMarkerIndexAllocation);
@@ -1405,14 +1449,17 @@ void shutdown() {
 		pointLightBufferAllocation = nullptr;
 	}
 
-	vkDestroyDescriptorPool(context.device, descriptorPool, nullptr);
-
 	for (RenderObject& object : renderObjects)
 	{
-		vmaUnmapMemory(context.allocator, object.uniformBufferAllocation);
-		
-		vmaDestroyBuffer(context.allocator, object.uniformBuffer, object.uniformBufferAllocation);
+		object.uniformBufferMemory = nullptr;
 	}
+
+	for (RenderObject& marker : lightMarkers)
+	{
+		marker.uniformBufferMemory = nullptr;
+	}
+
+	vkDestroyDescriptorPool(context.device, descriptorPool, nullptr);
 
 	vmaDestroyBuffer(context.allocator, indexBuffer, indexBufferAllocation);
 	vmaDestroyBuffer(context.allocator, vertexBuffer, vertexBufferAllocation);
@@ -1768,6 +1815,8 @@ void render(const graphics::internal::FrameData& fd) {
 	}
 
 	vmaFlushAllocation(context.allocator, spotLineVertexAllocation, 0, VK_WHOLE_SIZE);
+	
+	vmaFlushAllocation(context.allocator, modelUniformBufferAllocation, 0, VK_WHOLE_SIZE);
 
 	// IV. Clearance and fill with dark color.
 
@@ -1818,7 +1867,7 @@ void render(const graphics::internal::FrameData& fd) {
 
 	for (const RenderObject& object : renderObjects)
 	{
-		vkCmdBindDescriptorSets(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &object.descriptorSet, 0, nullptr);
+		vkCmdBindDescriptorSets(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &object.descriptorSet, 1, &object.uniformBufferOffset);
 		vkCmdBindDescriptorSets(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &sceneDescriptorSet, 0, nullptr);
 
 		vkCmdDrawIndexed(fd.command_buffer, static_cast<uint32_t>(cylinderIndices.size()), 1, 0, 0, 0);
@@ -1833,7 +1882,7 @@ void render(const graphics::internal::FrameData& fd) {
 		{
 			const RenderObject& marker = lightMarkers[i];
 
-			vkCmdBindDescriptorSets(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &marker.descriptorSet, 0, nullptr);
+			vkCmdBindDescriptorSets(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &marker.descriptorSet, 1, &marker.uniformBufferOffset);
 			vkCmdDrawIndexed(fd.command_buffer, static_cast<uint32_t>(lightMarkerIndices.size()), 1, 0, 0, 0);
 		}
 
@@ -1846,7 +1895,7 @@ void render(const graphics::internal::FrameData& fd) {
 		{
 			const RenderObject& marker = lightMarkers[pointLightCount + i];
 
-			vkCmdBindDescriptorSets(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &marker.descriptorSet, 0, nullptr);
+			vkCmdBindDescriptorSets(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &marker.descriptorSet, 1, &marker.uniformBufferOffset);
 			vkCmdDraw(fd.command_buffer, spotLineVerticesPerLight, 1, static_cast<uint32_t>(i) * spotLineVerticesPerLight, 0);
 		}
 	}
