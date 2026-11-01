@@ -56,13 +56,18 @@ std::vector<unsigned char> texturePixels;
 VkImage textureImage = VK_NULL_HANDLE;
 VmaAllocation textureImageAllocation = nullptr;
 
-// [new] staging buffer && command pool
+// [new] staging buffer && command pool const
 
 VkBuffer textureStagingBuffer = VK_NULL_HANDLE;
 VmaAllocation textureStagingAllocation = nullptr;
 
 VkCommandPool uploadCommandPool = VK_NULL_HANDLE;
 VkCommandBuffer uploadCommandBuffer = VK_NULL_HANDLE;
+
+// [new] imageView&Sampler const'
+
+VkImageView textureImageView = VK_NULL_HANDLE;
+VkSampler textureSampler = VK_NULL_HANDLE;
 
 struct Vertex {
 	float position[3];
@@ -552,20 +557,6 @@ bool initialize() {
 		return false;
 	}
 
-	VkSubmitInfo uploadSubmitInfo{
-		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-		.commandBufferCount = 1,
-		.pCommandBuffers = &uploadCommandBuffer,
-	};
-
-	if (vkQueueSubmit(context.graphics_queue, 1, &uploadSubmitInfo, uploadFence) != VK_SUCCESS)
-	{
-		std::cerr << "Не удалось отправить команды загрузки.\n";
-
-		vkDestroyFence(context.device, uploadFence, nullptr);
-		return false;
-	}
-
 	if (vkWaitForFences(context.device, 1, &uploadFence, VK_TRUE, UINT64_MAX) != VK_SUCCESS)
 	{
 		std::cerr << "Не удалось дождаться завершения загрузки.\n";
@@ -577,6 +568,46 @@ bool initialize() {
 
 	textureStagingBuffer = VK_NULL_HANDLE;
 	textureStagingAllocation = nullptr;
+
+	// [new] ImageView && Sampler
+	
+	VkImageViewCreateInfo textureViewInfo{
+		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+		.image = textureImage,
+		.viewType = VK_IMAGE_VIEW_TYPE_2D,
+		.format = VK_FORMAT_R8G8B8A8_UNORM,
+		.subresourceRange = {
+			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+			.baseMipLevel = 0,
+			.levelCount = 1,
+			.baseArrayLayer = 0,
+			.layerCount = 1,
+		},
+	};
+
+	if (vkCreateImageView(context.device, &textureViewInfo, nullptr, &textureImageView) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось создать image view текстуры.\n";
+		return false;
+	}
+
+	VkSamplerCreateInfo textureSamplerInfo{
+		.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+		.magFilter = VK_FILTER_LINEAR,
+		.minFilter = VK_FILTER_LINEAR,
+		.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
+		.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+		.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+		.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+		.minLod = 0.0f,
+		.maxLod = 0.0f,
+	};
+
+	if (vkCreateSampler(context.device, &textureSamplerInfo, nullptr, &textureSampler) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось создать sampler текстуры.\n";
+		return false;
+	}
 
 	// Vertex Buffer
 
@@ -904,10 +935,22 @@ bool initialize() {
 		return false;
 	}
 
+	VkDescriptorSetLayoutBinding albedoLayoutBinding{
+		.binding = 1,
+		.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+		.descriptorCount = 1,
+		.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+	};
+
+	VkDescriptorSetLayoutBinding modelBindings[]{
+		uniformLayoutBinding,
+		albedoLayoutBinding,
+	};
+
 	VkDescriptorSetLayoutCreateInfo modelLayoutInfo{
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-		.bindingCount = 1,
-		.pBindings = &uniformLayoutBinding,
+		.bindingCount = 2,
+		.pBindings = modelBindings,
 	};
 
 	if (vkCreateDescriptorSetLayout(context.device, &modelLayoutInfo, nullptr, &modelDescriptorSetLayout) != VK_SUCCESS)
@@ -929,12 +972,16 @@ bool initialize() {
 			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			.descriptorCount = 4,
 		},
+		{
+			.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.descriptorCount = descriptorSetCapacity,
+		},
 	};
 
 	VkDescriptorPoolCreateInfo descriptorPoolInfo{
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 		.maxSets = descriptorSetCapacity,
-		.poolSizeCount = 2,
+		.poolSizeCount = 3,
 		.pPoolSizes = poolSizes,
 	};
 
@@ -943,6 +990,12 @@ bool initialize() {
 		std::cerr << "Не удалось создать descriptor pool.\n";
 		return false;
 	}
+
+	VkDescriptorImageInfo albedoImageInfo{
+		.sampler = textureSampler,
+		.imageView = textureImageView,
+		.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+	};
 
 	// Descriptor set
 
@@ -977,6 +1030,17 @@ bool initialize() {
 		};
 
 		vkUpdateDescriptorSets(context.device, 1, &objectDescriptorWrite, 0, nullptr);
+
+		VkWriteDescriptorSet albedoWrite{
+			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			.dstSet = object.descriptorSet,
+			.dstBinding = 1,
+			.descriptorCount = 1,
+			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.pImageInfo = &albedoImageInfo,
+		};
+
+		vkUpdateDescriptorSets(context.device, 1, &albedoWrite, 0, nullptr);
 	}
 
 	for (RenderObject& marker : lightMarkers)
@@ -1010,6 +1074,17 @@ bool initialize() {
 		};
 
 		vkUpdateDescriptorSets(context.device, 1, &markerWrite, 0, nullptr);
+
+		VkWriteDescriptorSet albedoWrite{
+			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			.dstSet = marker.descriptorSet,
+			.dstBinding = 1,
+			.descriptorCount = 1,
+			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.pImageInfo = &albedoImageInfo,
+		};
+
+		vkUpdateDescriptorSets(context.device, 1, &albedoWrite, 0, nullptr);
 	}
 
 	VkDescriptorSetAllocateInfo sceneSetAllocateInfo{
@@ -1261,6 +1336,9 @@ bool initialize() {
 void shutdown() {
 	auto& context = graphics::internal::context;
 	vkQueueWaitIdle(context.graphics_queue);
+
+	vkDestroySampler(context.device, textureSampler, nullptr);
+	vkDestroyImageView(context.device, textureImageView, nullptr);
 
 	vkDestroyCommandPool(context.device, uploadCommandPool, nullptr);
 

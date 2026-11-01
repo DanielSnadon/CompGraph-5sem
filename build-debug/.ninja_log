@@ -104,3 +104,14 @@
 705	869	1793550639064015223	vulkan-starter-app	a3855c156f123792
 4	923	1793551726601896966	CMakeFiles/vulkan-starter-app.dir/source/application.cpp.o	53205248df790fc1
 923	1099	1793551727520877921	vulkan-starter-app	a3855c156f123792
+3	830	1793558962908745589	CMakeFiles/vulkan-starter-app.dir/source/application.cpp.o	53205248df790fc1
+830	1007	1793558963735727383	vulkan-starter-app	a3855c156f123792
+4	958	1793559317996928475	CMakeFiles/vulkan-starter-app.dir/source/application.cpp.o	53205248df790fc1
+958	1142	1793559318950907473	vulkan-starter-app	a3855c156f123792
+5	144	1793559984161263144	/home/snadon/ComputerGraphics-5sem/shaders/basic.frag.spv	32a73cb1e3404359
+144	1080	1793559984172262902	CMakeFiles/vulkan-starter-app.dir/source/application.cpp.o	53205248df790fc1
+1080	1244	1793559985108242297	vulkan-starter-app	a3855c156f123792
+3	813	1793560024120381988	CMakeFiles/vulkan-starter-app.dir/source/application.cpp.o	53205248df790fc1
+813	987	1793560024930364116	vulkan-starter-app	a3855c156f123792
+3	798	1793560073274297417	CMakeFiles/vulkan-starter-app.dir/source/application.cpp.o	53205248df790fc1
+798	979	1793560074069279876	vulkan-starter-app	a3855c156f123792
