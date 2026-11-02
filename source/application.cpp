@@ -40,12 +40,12 @@ float cameraPitch = -30.0f;
 glm::vec3 cameraPosition(2.0f, 1.8f, 2.5f);
 
 float shininess = 32.0f;
-float ambient = 0.15f;
+float ambient = 0.02f;
 glm::vec3 ambientColor(1.0f);
 glm::vec3 specularColor(0.8f);
 glm::vec3 lightDirection(-0.5f, 1.0f, 0.3f);
 glm::vec3 lightColor(1.0f);
-float lightIntensity = 1.0f;
+float lightIntensity = 0.5f;
 
 // [new] staging buffer && command pool const
 
@@ -65,6 +65,22 @@ VkBuffer modelUniformBuffer = VK_NULL_HANDLE;
 VmaAllocation modelUniformBufferAllocation = nullptr;
 unsigned char* modelUniformBufferMemory = nullptr;
 VkDeviceSize modelUniformStride = 0;
+
+// [new] Texture push structure
+
+struct TexturePushConstants
+{
+    float time = 0.0f;
+    float strength = 0.5f;
+	float parameter = 20.0f;
+	float speed = 2.0f;
+    float uvScale = 1.0f;
+    uint32_t enabled = 0;
+};
+
+TexturePushConstants textureEffect;
+
+static_assert(sizeof(TexturePushConstants) == 24);
 
 struct Vertex {
 	float position[3];
@@ -121,6 +137,7 @@ struct SpotLight {
 };
 
 // [new] TextureMaterial structs
+
 struct TextureResource
 {
     unsigned width = 0;
@@ -137,13 +154,17 @@ struct Material
 {
     const char* name = "";
     const char* albedoPath = "";
+	const char* specularPath = nullptr;
+	const char* emissivePath = nullptr;
 
     TextureResource albedo;
+	TextureResource specular;
+	TextureResource emissive;
 
     VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 };
 
-std::array<Material, 4> materials{{
+std::array<Material, 6> materials{{
 	{
         .name = "Soda",
         .albedoPath = "textures/can.png",
@@ -151,16 +172,30 @@ std::array<Material, 4> materials{{
     {
         .name = "Checkboard",
         .albedoPath = "textures/checkboard.png",
+		.emissivePath = "textures/noise.png",
     },
     {
-        .name = "Tux",
+        .name = "Clear tux",
         .albedoPath = "textures/tux.png",
+    },
+	    {
+        .name = "Specular tux",
+        .albedoPath = "textures/tux.png",
+		.specularPath = "textures/tuxSpecular.png",
+    },
+	    {
+        .name = "Emission tux",
+        .albedoPath = "textures/tux.png",
+		.emissivePath = "textures/tuxEmission.png",
     },
 	{
         .name = "Homyak",
         .albedoPath = "textures/homyak.png",
+		.specularPath = "textures/homyakSpecular.png",
     },
 }};
+
+TextureResource blackTexture;
 
 struct RenderObject {
 	glm::vec3 position{0.0f};
@@ -168,6 +203,11 @@ struct RenderObject {
 	glm::vec3 scale{1.0f};
 	uint32_t uniformBufferOffset = 0;
 	int materialIndex = 0;
+	bool textureEffectEnabled = false;
+	float textureEffectStrength = 0.5f;
+	float textureParameter = 20.0f;
+	float textureSpeed = 2.0f;
+	float textureUVScale = 1.0f;
 
 	ModelUniformBufferObject* uniformBufferMemory = nullptr;
 	VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
@@ -593,6 +633,20 @@ bool uploadTexture(TextureResource& texture)
     return true;
 }
 
+bool loadTexturePixels(TextureResource& texture, const char* path)
+{
+    const unsigned error = lodepng::decode(texture.pixels, texture.width, texture.height, path, LCT_RGBA, 8);
+
+    if (error != 0)
+    {
+        std::cerr << "Не удалось прочитать " << path << ": " << lodepng_error_text(error) << '\n';
+
+        return false;
+    }
+
+    return true;
+}
+
 #pragma region Initze
 
 bool initialize() {
@@ -601,17 +655,31 @@ bool initialize() {
 
 	for (Material& material : materials)
 	{
-		TextureResource& texture = material.albedo;
-
-		const unsigned error = lodepng::decode(texture.pixels, texture.width, texture.height, material.albedoPath, LCT_RGBA, 8);
-
-		if (error != 0)
+		if (!loadTexturePixels(material.albedo, material.albedoPath))
 		{
-			std::cerr << "Не удалось загрузить " << material.albedoPath << ": " << lodepng_error_text(error) << '\n';
-
 			return false;
 		}
+
+		if (material.specularPath != nullptr)
+		{
+			if (!loadTexturePixels(material.specular, material.specularPath))
+			{
+				return false;
+			}
+		}
+
+		if (material.emissivePath != nullptr)
+		{
+			if (!loadTexturePixels(material.emissive, material.emissivePath))
+			{
+				return false;
+			}
+		}
 	}
+
+	blackTexture.width = 1;
+	blackTexture.height = 1;
+	blackTexture.pixels = {0, 0, 0, 255};
 
 	// Cylinder(s?)
 
@@ -621,9 +689,9 @@ bool initialize() {
 	renderObjects[1].position = {0.0f, 0.0f, 0.0f};
 	renderObjects[2].position = {1.0f, 0.0f, 0.0f};
 
-	renderObjects[0].materialIndex = 0;
-	renderObjects[1].materialIndex = 1;
-	renderObjects[2].materialIndex = 2;
+	renderObjects[0].materialIndex = 2;
+	renderObjects[1].materialIndex = 3;
+	renderObjects[2].materialIndex = 4;
 
 	for (RenderObject& object : renderObjects)
 	{
@@ -699,10 +767,30 @@ bool initialize() {
 	{
 		if (!uploadTexture(material.albedo))
 		{
-			std::cerr << "Ошибка загрузки текстуры на GPU: " << material.albedoPath << '\n';
-
 			return false;
 		}
+
+		if (material.specularPath != nullptr)
+		{
+			if (!uploadTexture(material.specular))
+			{
+				return false;
+			}
+		}
+
+		if (material.emissivePath != nullptr)
+		{
+			if (!uploadTexture(material.emissive))
+			{
+				return false;
+			}
+		}
+	}
+	
+	if (!uploadTexture(blackTexture))
+	{
+		std::cerr << "Не удалось загрузить чёрную текстуру.\n";
+		return false;
 	}
 
 	VkSamplerCreateInfo textureSamplerInfo{
@@ -1175,14 +1263,22 @@ bool initialize() {
 
 	modelUniformLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
 
+	VkDescriptorSetLayoutBinding specularLayoutBinding = albedoLayoutBinding;
+	specularLayoutBinding.binding = 2;
+
+	VkDescriptorSetLayoutBinding emissiveLayoutBinding = albedoLayoutBinding;
+	emissiveLayoutBinding.binding = 3;
+
 	VkDescriptorSetLayoutBinding modelBindings[]{
 		modelUniformLayoutBinding,
 		albedoLayoutBinding,
+		specularLayoutBinding,
+		emissiveLayoutBinding,
 	};
 
 	VkDescriptorSetLayoutCreateInfo modelLayoutInfo{
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-		.bindingCount = 2,
+		.bindingCount = 4,
 		.pBindings = modelBindings,
 	};
 
@@ -1207,7 +1303,7 @@ bool initialize() {
 		},
 		{
 			.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			.descriptorCount = descriptorSetCapacity,
+			.descriptorCount = 3 * descriptorSetCapacity,
 		},
 		{
 			.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
@@ -1266,6 +1362,18 @@ bool initialize() {
 			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 		};
 
+		VkDescriptorImageInfo specularImageInfo{
+			.sampler = textureSampler,
+			.imageView = material.specularPath != nullptr ? material.specular.view : blackTexture.view,
+			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		};
+
+		VkDescriptorImageInfo emissiveImageInfo{
+			.sampler = textureSampler,
+			.imageView = material.emissivePath != nullptr ? material.emissive.view : blackTexture.view,
+			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		};
+
 		VkWriteDescriptorSet materialWrites[]{
 			{
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -1283,10 +1391,32 @@ bool initialize() {
 				.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				.pImageInfo = &materialImageInfo,
 			},
+			{
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = material.descriptorSet,
+				.dstBinding = 2,
+				.descriptorCount = 1,
+				.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.pImageInfo = &specularImageInfo,
+			},
+			{
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = material.descriptorSet,
+				.dstBinding = 3,
+				.descriptorCount = 1,
+				.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.pImageInfo = &emissiveImageInfo,
+			},
 		};
 
-		vkUpdateDescriptorSets(context.device, 2, materialWrites, 0, nullptr);
+		vkUpdateDescriptorSets(context.device, 4, materialWrites, 0, nullptr);
 	}
+
+	VkDescriptorImageInfo blackImageInfo{
+		.sampler = textureSampler,
+		.imageView = blackTexture.view,
+		.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+	};
 
 	for (RenderObject& marker : lightMarkers)
 	{
@@ -1330,6 +1460,20 @@ bool initialize() {
 		};
 
 		vkUpdateDescriptorSets(context.device, 1, &albedoWrite, 0, nullptr);
+
+		for (uint32_t binding = 2; binding <= 3; ++binding)
+		{
+			VkWriteDescriptorSet blackWrite{
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = marker.descriptorSet,
+				.dstBinding = binding,
+				.descriptorCount = 1,
+				.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.pImageInfo = &blackImageInfo,
+			};
+
+			vkUpdateDescriptorSets(context.device, 1, &blackWrite, 0, nullptr);
+		}
 	}
 
 	VkDescriptorSetAllocateInfo sceneSetAllocateInfo{
@@ -1399,10 +1543,18 @@ bool initialize() {
 		modelDescriptorSetLayout,
 	};
 
+	VkPushConstantRange texturePushRange{
+		.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+		.offset = 0,
+		.size = sizeof(TexturePushConstants),
+	};
+
 	VkPipelineLayoutCreateInfo layoutInfo{};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	layoutInfo.setLayoutCount = 2;
 	layoutInfo.pSetLayouts = setLayouts;
+	layoutInfo.pushConstantRangeCount = 1;
+	layoutInfo.pPushConstantRanges = &texturePushRange;
 
 	if (vkCreatePipelineLayout(graphics::internal::context.device, &layoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
 	{
@@ -1576,6 +1728,29 @@ bool initialize() {
 }
 
 #pragma endregion
+
+void destroyTexture(TextureResource& texture)
+{
+    auto& context = graphics::internal::context;
+
+    if (texture.view != VK_NULL_HANDLE)
+    {
+        vkDestroyImageView(context.device, texture.view, nullptr);
+        texture.view = VK_NULL_HANDLE;
+    }
+
+    if (texture.image != VK_NULL_HANDLE)
+    {
+        vmaDestroyImage(
+            context.allocator,
+            texture.image,
+            texture.allocation);
+
+        texture.image = VK_NULL_HANDLE;
+        texture.allocation = nullptr;
+    }
+}
+
 #pragma region Shdown
 
 void shutdown() {
@@ -1627,20 +1802,19 @@ void shutdown() {
 
 	for (Material& material : materials)
 	{
-		TextureResource& texture = material.albedo;
+		destroyTexture(material.albedo);
+		destroyTexture(material.specular);
+		destroyTexture(material.emissive);
+	}
 
-		if (texture.view != VK_NULL_HANDLE)
-		{
-			vkDestroyImageView(context.device, texture.view, nullptr);
-			texture.view = VK_NULL_HANDLE;
-		}
+	destroyTexture(blackTexture);
 
-		if (texture.image != VK_NULL_HANDLE)
-		{
-			vmaDestroyImage(context.allocator, texture.image, texture.allocation);
-			texture.image = VK_NULL_HANDLE;
-			texture.allocation = nullptr;
-		}
+	if (blackTexture.image != VK_NULL_HANDLE)
+	{
+		vmaDestroyImage(context.allocator, blackTexture.image, blackTexture.allocation);
+
+		blackTexture.image = VK_NULL_HANDLE;
+		blackTexture.allocation = nullptr;
 	}
 
 	vmaDestroyBuffer(context.allocator, spotLineVertexBuffer, spotLineVertexAllocation);
@@ -1718,6 +1892,10 @@ void shutdown() {
 #pragma region Update
 
 void update([[maybe_unused]] double time) {
+
+	// 0) Animated texture
+
+	textureEffect.time = static_cast<float>(time);
 
 	// 1) Time
 
@@ -1843,7 +2021,18 @@ void update([[maybe_unused]] double time) {
 			ImGui::EndCombo();
 		}
 
+		ImGui::Checkbox("Texture effect", &object.textureEffectEnabled);
+
+		ImGui::SliderFloat("Effect strength", &object.textureEffectStrength, 0.0f, 1.0f);
+
+		ImGui::SliderFloat("Effect speed", &object.textureSpeed, 0.0f, 10.0f);
+
+		ImGui::SliderFloat("Effect parameter", &object.textureParameter, 1.0f, 200.0f);
+
+		ImGui::SliderFloat("UV scale", &object.textureUVScale, 0.5f, 5.0f);
+		
 		ImGui::Separator();
+
 		ImGui::PopID();
 	}
 
@@ -2131,13 +2320,26 @@ void render(const graphics::internal::FrameData& fd) {
 
 	vkCmdBindIndexBuffer(fd.command_buffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-	for (const RenderObject& object : renderObjects)
+	for (size_t i = 0; i < renderObjects.size(); ++i)
 	{
+		const RenderObject& object = renderObjects[i];
+			
 		const Material& material = materials[object.materialIndex];
 
 		vkCmdBindDescriptorSets(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &material.descriptorSet, 1, &object.uniformBufferOffset);
 		vkCmdBindDescriptorSets(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &sceneDescriptorSet, 0, nullptr);
 
+		TexturePushConstants objectEffect{
+			.time = textureEffect.time,
+			.strength = object.textureEffectStrength,
+			.parameter = object.textureParameter,
+			.speed = object.textureSpeed,
+			.uvScale = object.textureUVScale,
+			.enabled = object.textureEffectEnabled ? 1u : 0u,
+		};
+
+		vkCmdPushConstants(fd.command_buffer, pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(objectEffect), &objectEffect);
+			
 		vkCmdDrawIndexed(fd.command_buffer, static_cast<uint32_t>(cylinderIndices.size()), 1, 0, 0, 0);
 	}
 

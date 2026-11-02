@@ -6,6 +6,10 @@ layout(location = 2) in vec3 inWorldPosition;
 layout(location = 3) in vec2 inUV;
 layout(location = 0) out vec4 outColor;
 
+layout(set = 1, binding = 1) uniform sampler2D albedoTexture;
+layout(set = 1, binding = 2) uniform sampler2D specularTexture;
+layout(set = 1, binding = 3) uniform sampler2D emissiveTexture;
+
 layout(set = 0, binding = 0) uniform SceneUniformBufferObject
 {
     mat4 viewProjection;
@@ -48,19 +52,43 @@ layout(set = 0, binding = 2) readonly buffer SpotLightBuffer
     SpotLight spotLights[];
 } spotLightData;
 
-layout(set = 1, binding = 1) uniform sampler2D albedoTexture;
+layout(push_constant) uniform TextureEffect
+{
+    float time;
+    float strength;
+    float parameter;
+    float speed;
+    float uvScale;
+    uint enabled;
+} effect;
 
-void main() {
-
-    // Модель без освещения
-
-    if (object.materialParameters.y > 0.5)
+void main()
+{
+    if (object.materialParameters.y > 0.5) // Off
     {
         outColor = vec4(inColor, 1.0);
         return;
     }
 
-    vec3 albedo = texture(albedoTexture, inUV).rgb * inColor;
+    vec3 textureColor = texture(albedoTexture, inUV).rgb;
+
+    if (effect.enabled != 0u)
+    {
+        vec2 uv = inUV * effect.uvScale;
+
+        float wave = 0.04 * sin(uv.y * effect.parameter + effect.time * effect.speed);
+
+        vec3 firstColor = texture(albedoTexture, uv + vec2(wave, 0.0)).rgb;
+        vec3 secondColor = texture(albedoTexture, uv - vec2(wave, 0.0)).rgb;
+
+        vec3 effColor = (firstColor + secondColor) * 0.7;
+
+        textureColor = mix(textureColor, effColor, effect.strength);
+    }
+
+    vec3 albedo = textureColor * inColor;
+    vec3 materialSpecular = texture(specularTexture, inUV).rgb * object.specularColor.rgb;
+    vec3 emission = texture(emissiveTexture, inUV).rgb;
 
     // Цилиндр
 
@@ -74,7 +102,7 @@ void main() {
     float specular = pow(max(dot(normal, halfVector), 0.0), object.materialParameters.x);
 
     vec3 light = scene.lightColorIntensity.rgb * scene.lightColorIntensity.w;
-    vec3 finalColor = albedo * scene.ambientColorIntensity.rgb * scene.ambientColorIntensity.w + light * (albedo * (0.85 * diffuse) + object.specularColor.rgb * specular);
+    vec3 finalColor = albedo * scene.ambientColorIntensity.rgb * scene.ambientColorIntensity.w + light * (albedo * (0.85 * diffuse) + materialSpecular * specular);
 
     // Окружение
 
@@ -99,7 +127,7 @@ void main() {
 
         vec3 pointLight = pointLightData.pointLights[i].colorIntensity.rgb * pointLightData.pointLights[i].colorIntensity.w / distanceSq;
 
-        finalColor += pointLight * (albedo * (0.85 * pointDiffuse) + object.specularColor.rgb * pointSpecular);
+        finalColor += pointLight * (albedo * (0.85 * pointDiffuse) + materialSpecular * pointSpecular);
     }
 
     int spotCount = clamp(scene.lightCounts.y, 0, spotLightData.spotLights.length());
@@ -135,8 +163,10 @@ void main() {
 
         vec3 spotLight = spot.colorIntensity.rgb * spot.colorIntensity.w * coneFactor / distanceSquared;
 
-        finalColor += spotLight * (albedo * (0.85 * spotDiffuse) + object.specularColor.rgb * spotSpecular);
+        finalColor += spotLight * (albedo * (0.85 * spotDiffuse) + materialSpecular * spotSpecular);
     }
+
+    finalColor += emission;
 
     outColor = vec4(finalColor, 1.0);
 }
