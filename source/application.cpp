@@ -47,14 +47,6 @@ glm::vec3 lightDirection(-0.5f, 1.0f, 0.3f);
 glm::vec3 lightColor(1.0f);
 float lightIntensity = 1.0f;
 
-// [new] texture const
-
-unsigned textureWidth = 0;
-unsigned textureHeight = 0;
-std::vector<unsigned char> texturePixels;
-VkImage textureImage = VK_NULL_HANDLE;
-VmaAllocation textureImageAllocation = nullptr;
-
 // [new] staging buffer && command pool const
 
 VkBuffer textureStagingBuffer = VK_NULL_HANDLE;
@@ -128,11 +120,54 @@ struct SpotLight {
     alignas(16) glm::vec4 coneAnglesDegrees{15.0f, 25.0f, 0.0f, 0.0f};
 };
 
+// [new] TextureMaterial structs
+struct TextureResource
+{
+    unsigned width = 0;
+    unsigned height = 0;
+
+    std::vector<unsigned char> pixels;
+
+    VkImage image = VK_NULL_HANDLE;
+    VmaAllocation allocation = nullptr;
+    VkImageView view = VK_NULL_HANDLE;
+};
+
+struct Material
+{
+    const char* name = "";
+    const char* albedoPath = "";
+
+    TextureResource albedo;
+
+    VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
+};
+
+std::array<Material, 4> materials{{
+	{
+        .name = "Soda",
+        .albedoPath = "textures/can.png",
+    },
+    {
+        .name = "Checkboard",
+        .albedoPath = "textures/checkboard.png",
+    },
+    {
+        .name = "Tux",
+        .albedoPath = "textures/tux.png",
+    },
+	{
+        .name = "Homyak",
+        .albedoPath = "textures/homyak.png",
+    },
+}};
+
 struct RenderObject {
 	glm::vec3 position{0.0f};
 	glm::vec3 rotationDegrees{0.0f};
 	glm::vec3 scale{1.0f};
 	uint32_t uniformBufferOffset = 0;
+	int materialIndex = 0;
 
 	ModelUniformBufferObject* uniformBufferMemory = nullptr;
 	VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
@@ -141,12 +176,12 @@ struct RenderObject {
 constexpr uint32_t maxPointLights = 8;
 
 std::array<PointLight, maxPointLights> pointLights{};
-int pointLightCount = 1;
+int pointLightCount = 0;
 
 constexpr uint32_t maxSpotLights = 8;
 
 std::array<SpotLight, maxSpotLights> spotLights{};
-int spotLightCount = 1;
+int spotLightCount = 0;
 
 constexpr uint32_t maxLightMarkers = maxPointLights + maxSpotLights;
 std::array<RenderObject, maxLightMarkers> lightMarkers{};
@@ -353,66 +388,9 @@ void generateCylinderGeometry() {
 
 }
 
-#pragma region Initze
-
-bool initialize() {
-
-	// [new] Load texture
-
-	if (lodepng::decode(texturePixels, textureWidth, textureHeight, "textures/tux.png", LCT_RGBA, 8))
-	{
-		std::cerr << "Ошибка: не удалось загрузить текстуру.\n";
-		return false;
-	}
-
-	// Cylinder(s?)
-
-	generateCylinderGeometry();
-
-	renderObjects[0].position = {-1.0f, 0.0f, 0.0f};
-	renderObjects[1].position = {0.0f, 0.0f, 0.0f};
-	renderObjects[2].position = {1.0f, 0.0f, 0.0f};
-
-	for (RenderObject& object : renderObjects)
-	{
-		object.scale = glm::vec3(0.55f);
-	}
-
-	auto& context = graphics::internal::context;
-
-	// [new] Dynamic buffer
-
-	VkPhysicalDeviceProperties deviceProperties{};
-	vkGetPhysicalDeviceProperties(context.physical_device, &deviceProperties);
-	const VkDeviceSize alignment = deviceProperties.limits.minUniformBufferOffsetAlignment;
-
-	modelUniformStride = ((sizeof(ModelUniformBufferObject) + alignment - 1) / alignment) * alignment;
-
-	const VkDeviceSize modelRecordCount = renderObjects.size() + lightMarkers.size();
-
-	VkBufferCreateInfo modelBufferInfo{
-		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-		.size = modelUniformStride * modelRecordCount,
-		.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-	};
-
-	VmaAllocationCreateInfo modelAllocationInfo{
-		.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		.usage = VMA_MEMORY_USAGE_AUTO,
-	};
-
-	if (vmaCreateBuffer(context.allocator, &modelBufferInfo, &modelAllocationInfo, &modelUniformBuffer, &modelUniformBufferAllocation, nullptr) != VK_SUCCESS)
-	{
-		std::cerr << "Не удалось создать общий буфер моделей.\n";
-		return false;
-	}
-
-	if (vmaMapMemory(context.allocator, modelUniformBufferAllocation, reinterpret_cast<void**>(&modelUniformBufferMemory)) != VK_SUCCESS)
-	{
-		std::cerr << "Не удалось отобразить память общего буфера моделей.\n";
-		return false;
-	}
+bool uploadTexture(TextureResource& texture)
+{
+    auto& context = graphics::internal::context;
 
 	// [new] Texture
 
@@ -420,7 +398,7 @@ bool initialize() {
 		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 		.imageType = VK_IMAGE_TYPE_2D,
 		.format = VK_FORMAT_R8G8B8A8_UNORM,
-		.extent = {textureWidth, textureHeight, 1},
+		.extent = {texture.width, texture.height, 1},
 		.mipLevels = 1,
 		.arrayLayers = 1,
 		.samples = VK_SAMPLE_COUNT_1_BIT,
@@ -435,13 +413,13 @@ bool initialize() {
 		.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 	};
 
-	if (vmaCreateImage(context.allocator, &textureImageInfo, &textureAllocationInfo, &textureImage, &textureImageAllocation, nullptr) != VK_SUCCESS)
+	if (vmaCreateImage(context.allocator, &textureImageInfo, &textureAllocationInfo, &texture.image, &texture.allocation, nullptr) != VK_SUCCESS)
 	{
 		std::cerr << "Не удалось создать изображение текстуры.\n";
 		return false;
 	}
 
-	const VkDeviceSize textureDataSize = texturePixels.size();
+	const VkDeviceSize textureDataSize = texture.pixels.size();
 
 	// [new] Staging Buffer
 	
@@ -465,41 +443,20 @@ bool initialize() {
 		return false;
 	}
 
-	std::memcpy(stagingMemoryInfo.pMappedData, texturePixels.data(), texturePixels.size());
+	std::memcpy(stagingMemoryInfo.pMappedData, texture.pixels.data(), texture.pixels.size());
 
 	vmaFlushAllocation(context.allocator, textureStagingAllocation, 0, textureDataSize);
-
-	// [new] Command pool&buffer
-
-	VkCommandPoolCreateInfo uploadPoolInfo{
-		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-		.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-		.queueFamilyIndex = context.graphics_queue_index,
-	};
-
-	if (vkCreateCommandPool(context.device, &uploadPoolInfo, nullptr, &uploadCommandPool) != VK_SUCCESS)
-	{
-		std::cerr << "Не удалось создать command pool загрузки.\n";
-		return false;
-	}
-
-	VkCommandBufferAllocateInfo uploadCommandInfo{
-		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-		.commandPool = uploadCommandPool,
-		.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-		.commandBufferCount = 1,
-	};
-
-	if (vkAllocateCommandBuffers(context.device, &uploadCommandInfo, &uploadCommandBuffer) != VK_SUCCESS)
-	{
-		std::cerr << "Не удалось выделить command buffer загрузки.\n";
-		return false;
-	}
 
 	VkCommandBufferBeginInfo uploadBeginInfo{
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
 	};
+
+	if (vkResetCommandBuffer(uploadCommandBuffer, 0) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось сбросить command buffer загрузки.\n";
+		return false;
+	}
 
 	if (vkBeginCommandBuffer(uploadCommandBuffer, &uploadBeginInfo) != VK_SUCCESS)
 	{
@@ -517,7 +474,7 @@ bool initialize() {
 		.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 		.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 		.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-		.image = textureImage,
+		.image = texture.image,
 		.subresourceRange = {
 			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
 			.baseMipLevel = 0,
@@ -540,10 +497,10 @@ bool initialize() {
 			.layerCount = 1,
 		},
 		.imageOffset = {0, 0, 0},
-		.imageExtent = {textureWidth, textureHeight, 1},
+		.imageExtent = {texture.width, texture.height, 1},
 	};
 
-	vkCmdCopyBufferToImage(uploadCommandBuffer, textureStagingBuffer, textureImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &textureCopyRegion);
+	vkCmdCopyBufferToImage(uploadCommandBuffer, textureStagingBuffer, texture.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &textureCopyRegion);
 
 	// [new] Barrier 2: Transfer_dst_optimal -> Shader_read_only_optimal
 
@@ -555,7 +512,7 @@ bool initialize() {
 		.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 		.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 		.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-		.image = textureImage,
+		.image = texture.image,
 		.subresourceRange = {
 			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
 			.baseMipLevel = 0,
@@ -611,11 +568,11 @@ bool initialize() {
 	textureStagingBuffer = VK_NULL_HANDLE;
 	textureStagingAllocation = nullptr;
 
-	// [new] ImageView && Sampler
+	// [new] ImageView
 	
 	VkImageViewCreateInfo textureViewInfo{
 		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-		.image = textureImage,
+		.image = texture.image,
 		.viewType = VK_IMAGE_VIEW_TYPE_2D,
 		.format = VK_FORMAT_R8G8B8A8_UNORM,
 		.subresourceRange = {
@@ -627,10 +584,125 @@ bool initialize() {
 		},
 	};
 
-	if (vkCreateImageView(context.device, &textureViewInfo, nullptr, &textureImageView) != VK_SUCCESS)
+	if (vkCreateImageView(context.device, &textureViewInfo, nullptr, &texture.view) != VK_SUCCESS)
 	{
 		std::cerr << "Не удалось создать image view текстуры.\n";
 		return false;
+	}
+
+    return true;
+}
+
+#pragma region Initze
+
+bool initialize() {
+
+	// [new] Load texture
+
+	for (Material& material : materials)
+	{
+		TextureResource& texture = material.albedo;
+
+		const unsigned error = lodepng::decode(texture.pixels, texture.width, texture.height, material.albedoPath, LCT_RGBA, 8);
+
+		if (error != 0)
+		{
+			std::cerr << "Не удалось загрузить " << material.albedoPath << ": " << lodepng_error_text(error) << '\n';
+
+			return false;
+		}
+	}
+
+	// Cylinder(s?)
+
+	generateCylinderGeometry();
+
+	renderObjects[0].position = {-1.0f, 0.0f, 0.0f};
+	renderObjects[1].position = {0.0f, 0.0f, 0.0f};
+	renderObjects[2].position = {1.0f, 0.0f, 0.0f};
+
+	renderObjects[0].materialIndex = 0;
+	renderObjects[1].materialIndex = 1;
+	renderObjects[2].materialIndex = 2;
+
+	for (RenderObject& object : renderObjects)
+	{
+		object.scale = glm::vec3(0.55f);
+	}
+
+	auto& context = graphics::internal::context;
+
+	// [new] Dynamic buffer
+
+	VkPhysicalDeviceProperties deviceProperties{};
+	vkGetPhysicalDeviceProperties(context.physical_device, &deviceProperties);
+	const VkDeviceSize alignment = deviceProperties.limits.minUniformBufferOffsetAlignment;
+
+	modelUniformStride = ((sizeof(ModelUniformBufferObject) + alignment - 1) / alignment) * alignment;
+
+	const VkDeviceSize modelRecordCount = renderObjects.size() + lightMarkers.size();
+
+	VkBufferCreateInfo modelBufferInfo{
+		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+		.size = modelUniformStride * modelRecordCount,
+		.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+	};
+
+	VmaAllocationCreateInfo modelAllocationInfo{
+		.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+		.usage = VMA_MEMORY_USAGE_AUTO,
+	};
+
+	if (vmaCreateBuffer(context.allocator, &modelBufferInfo, &modelAllocationInfo, &modelUniformBuffer, &modelUniformBufferAllocation, nullptr) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось создать общий буфер моделей.\n";
+		return false;
+	}
+
+	if (vmaMapMemory(context.allocator, modelUniformBufferAllocation, reinterpret_cast<void**>(&modelUniformBufferMemory)) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось отобразить память общего буфера моделей.\n";
+		return false;
+	}
+
+	// [new] Command pool&buffer
+
+	VkCommandPoolCreateInfo uploadPoolInfo{
+		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+		.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+		.queueFamilyIndex = context.graphics_queue_index,
+	};
+
+	if (vkCreateCommandPool(context.device, &uploadPoolInfo, nullptr, &uploadCommandPool) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось создать command pool загрузки.\n";
+		return false;
+	}
+
+	VkCommandBufferAllocateInfo uploadCommandInfo{
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+		.commandPool = uploadCommandPool,
+		.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+		.commandBufferCount = 1,
+	};
+
+	if (vkAllocateCommandBuffers(context.device, &uploadCommandInfo, &uploadCommandBuffer) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось выделить command buffer загрузки.\n";
+		return false;
+	}
+
+	// [new] Material upload + Sampler
+
+	for (Material& material : materials)
+	{
+		if (!uploadTexture(material.albedo))
+		{
+			std::cerr << "Ошибка загрузки текстуры на GPU: " << material.albedoPath << '\n';
+
+			return false;
+		}
 	}
 
 	VkSamplerCreateInfo textureSamplerInfo{
@@ -682,6 +754,11 @@ bool initialize() {
 	vmaFlushAllocation(context.allocator, vertexStagingAllocation, 0, vertexDataSize);
 
 	// [new] Vertex-related Buffers
+
+	VkCommandBufferBeginInfo uploadBeginInfo{
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+	};
 
 	VkBufferCreateInfo vertexBufferInfo{
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -1117,7 +1194,7 @@ bool initialize() {
 
 	// Descriptor pool
 
-	const uint32_t descriptorSetCapacity = 1 + static_cast<uint32_t>(renderObjects.size() + lightMarkers.size());
+	const uint32_t descriptorSetCapacity = 1 + static_cast<uint32_t>(materials.size() + lightMarkers.size());
 
 	VkDescriptorPoolSize poolSizes[]{
 		{
@@ -1134,7 +1211,7 @@ bool initialize() {
 		},
 		{
 			.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-			.descriptorCount = static_cast<uint32_t>(renderObjects.size() + lightMarkers.size()),
+			.descriptorCount = static_cast<uint32_t>(materials.size() + lightMarkers.size()),
 		},
 	};
 
@@ -1153,54 +1230,62 @@ bool initialize() {
 
 	VkDescriptorImageInfo albedoImageInfo{
 		.sampler = textureSampler,
-		.imageView = textureImageView,
+		.imageView = materials[0].albedo.view,
 		.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 	};
 
 	// Descriptor set
 
-	for (RenderObject& object : renderObjects)
+	for (Material& material : materials)
 	{
-		VkDescriptorSetAllocateInfo objectSetAllocateInfo{
+		VkDescriptorSetAllocateInfo materialSetInfo{
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 			.descriptorPool = descriptorPool,
 			.descriptorSetCount = 1,
 			.pSetLayouts = &modelDescriptorSetLayout,
 		};
 
-		if (vkAllocateDescriptorSets(context.device, &objectSetAllocateInfo, &object.descriptorSet) != VK_SUCCESS)
+		if (vkAllocateDescriptorSets(
+				context.device,
+				&materialSetInfo,
+				&material.descriptorSet) != VK_SUCCESS)
 		{
-			std::cerr << "Не удалось выделить descriptor set.\n";
-			return false; 
+			std::cerr << "Не удалось выделить набор материала.\n";
+			return false;
 		}
 
-		VkDescriptorBufferInfo objectBufferInfo{
+		VkDescriptorBufferInfo modelBufferDescriptor{
 			.buffer = modelUniformBuffer,
 			.offset = 0,
 			.range = sizeof(ModelUniformBufferObject),
 		};
 
-		VkWriteDescriptorSet objectDescriptorWrite{
-			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			.dstSet = object.descriptorSet,
-			.dstBinding = 0,
-			.descriptorCount = 1,
-			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-			.pBufferInfo = &objectBufferInfo,
+		VkDescriptorImageInfo materialImageInfo{
+			.sampler = textureSampler,
+			.imageView = material.albedo.view,
+			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 		};
 
-		vkUpdateDescriptorSets(context.device, 1, &objectDescriptorWrite, 0, nullptr);
-
-		VkWriteDescriptorSet albedoWrite{
-			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			.dstSet = object.descriptorSet,
-			.dstBinding = 1,
-			.descriptorCount = 1,
-			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			.pImageInfo = &albedoImageInfo,
+		VkWriteDescriptorSet materialWrites[]{
+			{
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = material.descriptorSet,
+				.dstBinding = 0,
+				.descriptorCount = 1,
+				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+				.pBufferInfo = &modelBufferDescriptor,
+			},
+			{
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = material.descriptorSet,
+				.dstBinding = 1,
+				.descriptorCount = 1,
+				.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.pImageInfo = &materialImageInfo,
+			},
 		};
 
-		vkUpdateDescriptorSets(context.device, 1, &albedoWrite, 0, nullptr);
+		vkUpdateDescriptorSets(context.device, 2, materialWrites, 0, nullptr);
 	}
 
 	for (RenderObject& marker : lightMarkers)
@@ -1524,17 +1609,14 @@ void shutdown() {
 
 	if (modelUniformBuffer != VK_NULL_HANDLE)
 	{
-		vmaDestroyBuffer(
-			context.allocator,
-			modelUniformBuffer,
-			modelUniformBufferAllocation);
+		vmaDestroyBuffer(context.allocator, modelUniformBuffer, modelUniformBufferAllocation);
 
 		modelUniformBuffer = VK_NULL_HANDLE;
 		modelUniformBufferAllocation = nullptr;
 	}
 
 	vkDestroySampler(context.device, textureSampler, nullptr);
-	vkDestroyImageView(context.device, textureImageView, nullptr);
+
 
 	vkDestroyCommandPool(context.device, uploadCommandPool, nullptr);
 
@@ -1543,12 +1625,22 @@ void shutdown() {
 		vmaDestroyBuffer(context.allocator, textureStagingBuffer, textureStagingAllocation);
 	}
 
-	if (textureImage != VK_NULL_HANDLE)
+	for (Material& material : materials)
 	{
-		vmaDestroyImage(context.allocator, textureImage, textureImageAllocation);
+		TextureResource& texture = material.albedo;
 
-		textureImage = VK_NULL_HANDLE;
-		textureImageAllocation = nullptr;
+		if (texture.view != VK_NULL_HANDLE)
+		{
+			vkDestroyImageView(context.device, texture.view, nullptr);
+			texture.view = VK_NULL_HANDLE;
+		}
+
+		if (texture.image != VK_NULL_HANDLE)
+		{
+			vmaDestroyImage(context.allocator, texture.image, texture.allocation);
+			texture.image = VK_NULL_HANDLE;
+			texture.allocation = nullptr;
+		}
 	}
 
 	vmaDestroyBuffer(context.allocator, spotLineVertexBuffer, spotLineVertexAllocation);
@@ -1722,6 +1814,38 @@ void update([[maybe_unused]] double time) {
 	ImGui::SliderFloat("Animation speed", &animationSpeed, -3.0f, 3.0f);
 	ImGui::SliderFloat("Trajectory radius", &trajectoryRadius, 0.0f, 1.5f);
 	ImGui::SliderFloat("Trajectory height", &trajectoryHeight, 0.0f, 1.0f);
+
+	ImGui::End();
+
+	ImGui::Begin("Materials");
+
+	for (size_t i = 0; i < renderObjects.size(); ++i)
+	{
+		ImGui::PushID(static_cast<int>(i));
+
+		RenderObject& object = renderObjects[i];
+
+		ImGui::Text("Cylinder %d", static_cast<int>(i + 1));
+
+		if (ImGui::BeginCombo("Material", materials[object.materialIndex].name))
+		{
+			for (size_t j = 0; j < materials.size(); ++j)
+			{
+				const bool selected =
+					object.materialIndex == static_cast<int>(j);
+
+				if (ImGui::Selectable(materials[j].name, selected))
+				{
+					object.materialIndex = static_cast<int>(j);
+				}
+			}
+
+			ImGui::EndCombo();
+		}
+
+		ImGui::Separator();
+		ImGui::PopID();
+	}
 
 	ImGui::End();
 
@@ -2009,7 +2133,9 @@ void render(const graphics::internal::FrameData& fd) {
 
 	for (const RenderObject& object : renderObjects)
 	{
-		vkCmdBindDescriptorSets(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &object.descriptorSet, 1, &object.uniformBufferOffset);
+		const Material& material = materials[object.materialIndex];
+
+		vkCmdBindDescriptorSets(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &material.descriptorSet, 1, &object.uniformBufferOffset);
 		vkCmdBindDescriptorSets(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &sceneDescriptorSet, 0, nullptr);
 
 		vkCmdDrawIndexed(fd.command_buffer, static_cast<uint32_t>(cylinderIndices.size()), 1, 0, 0, 0);
