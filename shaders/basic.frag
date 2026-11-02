@@ -98,8 +98,14 @@ void main()
     float diffuse = max(dot(normal, lightDirection), 0.0);
 
     vec3 viewDirection = normalize(scene.cameraPosition.xyz - inWorldPosition);
-    vec3 halfVector = normalize(lightDirection + viewDirection);
-    float specular = pow(max(dot(normal, halfVector), 0.0), object.materialParameters.x);
+    float specular = 0.0;
+
+    if (diffuse > 0.0)
+    {
+        vec3 halfVector = normalize(lightDirection + viewDirection);
+
+        specular = pow(max(dot(normal, halfVector), 0.0), object.materialParameters.x);
+    }
 
     vec3 light = scene.lightColorIntensity.rgb * scene.lightColorIntensity.w;
     vec3 finalColor = albedo * scene.ambientColorIntensity.rgb * scene.ambientColorIntensity.w + light * (albedo * (0.85 * diffuse) + materialSpecular * specular);

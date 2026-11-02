@@ -1809,14 +1809,6 @@ void shutdown() {
 
 	destroyTexture(blackTexture);
 
-	if (blackTexture.image != VK_NULL_HANDLE)
-	{
-		vmaDestroyImage(context.allocator, blackTexture.image, blackTexture.allocation);
-
-		blackTexture.image = VK_NULL_HANDLE;
-		blackTexture.allocation = nullptr;
-	}
-
 	vmaDestroyBuffer(context.allocator, spotLineVertexBuffer, spotLineVertexAllocation);
 
 	vmaDestroyBuffer(context.allocator, lightMarkerVertexBuffer, lightMarkerVertexAllocation);
