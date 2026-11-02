@@ -134,8 +134,6 @@ struct RenderObject {
 	glm::vec3 scale{1.0f};
 	uint32_t uniformBufferOffset = 0;
 
-	VkBuffer uniformBuffer = VK_NULL_HANDLE;
-	VmaAllocation uniformBufferAllocation = nullptr;
 	ModelUniformBufferObject* uniformBufferMemory = nullptr;
 	VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 };
@@ -188,11 +186,15 @@ VkPipeline lightLinePipeline = VK_NULL_HANDLE;
 
 VkBuffer vertexBuffer = VK_NULL_HANDLE;
 VmaAllocation vertexBufferAllocation = nullptr;
-Vertex* vertexBufferMemory = nullptr;
+
+VkBuffer vertexStagingBuffer = VK_NULL_HANDLE;
+VmaAllocation vertexStagingAllocation = nullptr;
 
 VkBuffer indexBuffer = VK_NULL_HANDLE;
 VmaAllocation indexBufferAllocation = nullptr;
-uint32_t* indexBufferMemory = nullptr;
+
+VkBuffer indexStagingBuffer = VK_NULL_HANDLE;
+VmaAllocation indexStagingAllocation = nullptr;
 
 VkBuffer sceneUniformBuffer = VK_NULL_HANDLE;
 VmaAllocation sceneUniformBufferAllocation = nullptr;
@@ -357,7 +359,7 @@ bool initialize() {
 
 	// [new] Load texture
 
-	if (lodepng::decode(texturePixels, textureWidth, textureHeight, "textures/albedo.png", LCT_RGBA, 8))
+	if (lodepng::decode(texturePixels, textureWidth, textureHeight, "textures/tux.png", LCT_RGBA, 8))
 	{
 		std::cerr << "Ошибка: не удалось загрузить текстуру.\n";
 		return false;
@@ -649,21 +651,48 @@ bool initialize() {
 		return false;
 	}
 
-	// Vertex Buffer
+	// [new] Staging vertex buffer
 
-	const size_t vertexDataSize = cylinderVertices.size() * sizeof(Vertex);
+	const VkDeviceSize vertexDataSize = cylinderVertices.size() * sizeof(Vertex);
+
+	VkBufferCreateInfo vertexStagingInfo{
+		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+		.size = vertexDataSize,
+		.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+	};
+
+	VmaAllocationCreateInfo vertexStagingAllocationInfo{
+		.flags =
+			VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
+			| VMA_ALLOCATION_CREATE_MAPPED_BIT,
+		.usage = VMA_MEMORY_USAGE_AUTO,
+	};
+
+	VmaAllocationInfo vertexStagingMemoryInfo{};
+
+	if (vmaCreateBuffer(context.allocator, &vertexStagingInfo, &vertexStagingAllocationInfo, &vertexStagingBuffer, &vertexStagingAllocation, &vertexStagingMemoryInfo) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось создать staging buffer вершин.\n";
+		return false;
+	}
+
+	std::memcpy(vertexStagingMemoryInfo.pMappedData, cylinderVertices.data(), static_cast<size_t>(vertexDataSize));
+
+	vmaFlushAllocation(context.allocator, vertexStagingAllocation, 0, vertexDataSize);
+
+	// [new] Vertex-related Buffers
 
 	VkBufferCreateInfo vertexBufferInfo{
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 		.size = vertexDataSize,
-		.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+		.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
 	};
 
 	VmaAllocationCreateInfo vertexAllocationInfo{
-		.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT |
-			VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		.usage = VMA_MEMORY_USAGE_AUTO,
+		.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+		.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 	};
 
 	if (vmaCreateBuffer(context.allocator, &vertexBufferInfo, &vertexAllocationInfo, &vertexBuffer, &vertexBufferAllocation, nullptr) != VK_SUCCESS)
@@ -672,32 +701,103 @@ bool initialize() {
 		return false;
 	}
 
-	if (vmaMapMemory(context.allocator, vertexBufferAllocation, reinterpret_cast<void**>(&vertexBufferMemory)) != VK_SUCCESS)
+	if (vkResetCommandBuffer(uploadCommandBuffer, 0) != VK_SUCCESS)
 	{
-		std::cerr << "Не удалось отобразить vertex buffer память.\n";
+		std::cerr << "Не удалось сбросить command buffer загрузки.\n";
 		return false;
 	}
 
-	memcpy(vertexBufferMemory, cylinderVertices.data(), vertexDataSize);
+	if (vkBeginCommandBuffer(uploadCommandBuffer, &uploadBeginInfo) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось начать загрузку вершин.\n";
+		return false;
+	}
 
-	vmaUnmapMemory(context.allocator, vertexBufferAllocation);
-	vertexBufferMemory = nullptr;
+	VkBufferCopy vertexCopyRegion{
+		.srcOffset = 0,
+		.dstOffset = 0,
+		.size = vertexDataSize,
+	};
 
-	// Index Buffer
+	vkCmdCopyBuffer(uploadCommandBuffer, vertexStagingBuffer, vertexBuffer, 1, &vertexCopyRegion);
+
+	VkMemoryBarrier vertexReadyBarrier{
+		.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
+		.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+		.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT,
+	};
+
+	vkCmdPipelineBarrier(uploadCommandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, 0, 1, &vertexReadyBarrier, 0, nullptr, 0, nullptr);
+
+	if (vkEndCommandBuffer(uploadCommandBuffer) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось завершить команды загрузки вершин.\n";
+		return false;
+	}
+
+	VkSubmitInfo vertexUploadSubmitInfo{
+		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+		.commandBufferCount = 1,
+		.pCommandBuffers = &uploadCommandBuffer,
+	};
+
+	if (vkQueueSubmit(context.graphics_queue, 1, &vertexUploadSubmitInfo, VK_NULL_HANDLE) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось отправить загрузку вершин.\n";
+		return false;
+	}
+
+	if (vkQueueWaitIdle(context.graphics_queue) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось дождаться загрузки вершин.\n";
+		return false;
+	}
+
+	vmaDestroyBuffer(context.allocator, vertexStagingBuffer, vertexStagingAllocation);
+
+	vertexStagingBuffer = VK_NULL_HANDLE;
+	vertexStagingAllocation = nullptr;
+
+	// [new]  Index-related Buffers
 
 	const size_t indexDataSize = cylinderIndices.size() * sizeof(uint32_t);
+
+	VkBufferCreateInfo indexStagingInfo{
+		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+		.size = indexDataSize,
+		.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+	};
+
+	VmaAllocationCreateInfo indexStagingAllocationInfo{
+		.flags =
+			VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+		.usage = VMA_MEMORY_USAGE_AUTO,
+	};
+
+	VmaAllocationInfo indexStagingMemoryInfo{};
+
+	if (vmaCreateBuffer(context.allocator, &indexStagingInfo, &indexStagingAllocationInfo, &indexStagingBuffer, &indexStagingAllocation, &indexStagingMemoryInfo) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось создать staging buffer индексов.\n";
+		return false;
+	}
+
+	std::memcpy(indexStagingMemoryInfo.pMappedData, cylinderIndices.data(), indexDataSize);
+
+	vmaFlushAllocation(context.allocator, indexStagingAllocation, 0, indexDataSize);
 
 	VkBufferCreateInfo indexBufferInfo{
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 		.size = indexDataSize,
-		.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+		.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT
+			| VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
 	};
 
 	VmaAllocationCreateInfo indexAllocationInfo{
-		.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT |
-			VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		.usage = VMA_MEMORY_USAGE_AUTO,
+		.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+		.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 	};
 
 	if (vmaCreateBuffer(context.allocator, &indexBufferInfo, &indexAllocationInfo, &indexBuffer, &indexBufferAllocation, nullptr) != VK_SUCCESS)
@@ -706,17 +806,58 @@ bool initialize() {
 		return false;
 	}
 
-	if (vmaMapMemory(context.allocator, indexBufferAllocation, reinterpret_cast<void**>(&indexBufferMemory)) != VK_SUCCESS)
+	if (vkResetCommandBuffer(uploadCommandBuffer, 0) != VK_SUCCESS)
 	{
-		std::cerr << "Не удалось отобразить index buffer память.\n";
+		std::cerr << "Не удалось сбросить command buffer загрузки.\n";
 		return false;
 	}
 
-	memcpy(indexBufferMemory, cylinderIndices.data(), indexDataSize);
+	if (vkBeginCommandBuffer(uploadCommandBuffer, &uploadBeginInfo) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось начать загрузку индексов.\n";
+		return false;
+	}
 
-	vmaUnmapMemory(context.allocator, indexBufferAllocation);
-	indexBufferMemory = nullptr;
-	
+	VkBufferCopy indexCopyRegion{
+		.srcOffset = 0,
+		.dstOffset = 0,
+		.size = indexDataSize,
+	};
+
+	vkCmdCopyBuffer(uploadCommandBuffer, indexStagingBuffer, indexBuffer, 1, &indexCopyRegion);
+
+	VkMemoryBarrier indexReadyBarrier{
+		.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
+		.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+		.dstAccessMask = VK_ACCESS_INDEX_READ_BIT,
+	};
+
+	vkCmdPipelineBarrier(uploadCommandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, 0, 1, &indexReadyBarrier, 0, nullptr, 0, nullptr);
+
+	if (vkEndCommandBuffer(uploadCommandBuffer) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось завершить команды загрузки индексов.\n";
+		return false;
+	}
+
+	VkSubmitInfo indexUploadSubmitInfo{
+		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+		.commandBufferCount = 1,
+		.pCommandBuffers = &uploadCommandBuffer,
+	};
+
+	if (vkQueueSubmit(context.graphics_queue, 1, &indexUploadSubmitInfo, VK_NULL_HANDLE) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось отправить загрузку индексов.\n";
+		return false;
+	}
+
+	if (vkQueueWaitIdle(context.graphics_queue) != VK_SUCCESS)
+	{
+		std::cerr << "Не удалось дождаться загрузки индексов.\n";
+		return false;
+	}
+
 	// Double Uniform Buffer
 	
 	VkBufferCreateInfo sceneUniformBufferInfo{
@@ -742,20 +883,6 @@ bool initialize() {
 		std::cerr << "Не удалось отобразить память uniform buffer сцены.\n";
 		return false;
 	}
-
-	// Uniform Buffer
-
-	VkBufferCreateInfo uniformBufferInfo{
-		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-		.size = sizeof(ModelUniformBufferObject),
-		.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-	};
-
-	VmaAllocationCreateInfo uniformAllocationInfo{
-		.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		.usage = VMA_MEMORY_USAGE_AUTO,
-	};
 
 	uint32_t modelRecordIndex = 0;
 
@@ -1370,6 +1497,25 @@ void shutdown() {
 	auto& context = graphics::internal::context;
 	vkQueueWaitIdle(context.graphics_queue);
 
+	vmaDestroyBuffer(context.allocator, indexStagingBuffer, indexStagingAllocation);
+
+	indexStagingBuffer = VK_NULL_HANDLE;
+	indexStagingAllocation = nullptr;
+
+	if (indexStagingBuffer != VK_NULL_HANDLE)
+	{
+		vmaDestroyBuffer(context.allocator, indexStagingBuffer, indexStagingAllocation);
+		indexStagingBuffer = VK_NULL_HANDLE;
+		indexStagingAllocation = nullptr;
+	}
+
+	if (vertexStagingBuffer != VK_NULL_HANDLE)
+	{
+		vmaDestroyBuffer(context.allocator, vertexStagingBuffer, vertexStagingAllocation);
+		vertexStagingBuffer = VK_NULL_HANDLE;
+		vertexStagingAllocation = nullptr;
+	}
+
 	if (modelUniformBufferMemory != nullptr)
 	{
 		vmaUnmapMemory(context.allocator, modelUniformBufferAllocation);
@@ -1724,8 +1870,6 @@ void render(const graphics::internal::FrameData& fd) {
 		object.uniformBufferMemory->color = glm::vec4(objectColor, 1.0f);
 		object.uniformBufferMemory->materialParameters = glm::vec4(shininess, 0.0f, 0.0f, 0.0f);
 		object.uniformBufferMemory->specularColor = glm::vec4(specularColor, 1.0f);
-
-		vmaFlushAllocation(context.allocator, object.uniformBufferAllocation, 0, sizeof(ModelUniformBufferObject));
 	}
 
 	// (Marker fillmento)
@@ -1759,8 +1903,6 @@ void render(const graphics::internal::FrameData& fd) {
 		marker.uniformBufferMemory->color = glm::vec4(markerColor, 1.0f);
 		marker.uniformBufferMemory->materialParameters = glm::vec4(1.0f, 1.0f, 0.0f, 0.0f);
 		marker.uniformBufferMemory->specularColor = glm::vec4(0.0f);
-
-		vmaFlushAllocation(context.allocator, marker.uniformBufferAllocation, 0, sizeof(ModelUniformBufferObject));
 	}
 
 	// (SpotLines fillmento)

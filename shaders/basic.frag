@@ -74,7 +74,7 @@ void main() {
     float specular = pow(max(dot(normal, halfVector), 0.0), object.materialParameters.x);
 
     vec3 light = scene.lightColorIntensity.rgb * scene.lightColorIntensity.w;
-    vec3 finalColor = albedo * scene.ambientColorIntensity.rgb * scene.ambientColorIntensity.w + light * (inColor * (0.85 * diffuse) + object.specularColor.rgb * specular);
+    vec3 finalColor = albedo * scene.ambientColorIntensity.rgb * scene.ambientColorIntensity.w + light * (albedo * (0.85 * diffuse) + object.specularColor.rgb * specular);
 
     // Окружение
 
