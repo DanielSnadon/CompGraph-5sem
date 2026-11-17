@@ -104,7 +104,7 @@ if(GLSLC_FOUND)
 
 		add_custom_command(
 			OUTPUT ${SHADER_BINARY_PATH}
-			COMMAND glslc ${SHADER_SOURCE} -o ${SHADER_BINARY_PATH}
+			COMMAND "${GLSLC_FOUND}" "${SHADER_SOURCE}" -o ${SHADER_BINARY_PATH}
 			DEPENDS ${SHADER_SOURCE}
 			COMMENT "Compiling ${SHADER_FILE} shader"
 		)
@@ -117,7 +117,10 @@ if(GLSLC_FOUND)
 
 	compile_shader(basic.vert)
 	compile_shader(basic.frag)
+	compile_shader(shadow.vert)
 
 	add_custom_target(shaders DEPENDS ${_SHADER_BINARIES})
 	add_dependencies(${PROJECT_NAME} shaders)
+else()
+	message(FATAL_ERROR "glslc is required to compile the Vulkan shaders")
 endif()

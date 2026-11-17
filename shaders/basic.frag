@@ -18,6 +18,8 @@ layout(set = 0, binding = 0) uniform SceneUniformBufferObject
     vec4 lightDirection;
     vec4 lightColorIntensity;
     ivec4 lightCounts;
+    mat4 sunViewProjection;
+    mat4 spotViewProjection;
 } scene;
 
 layout(set = 1, binding = 0) uniform ModelUniformBufferObject
@@ -62,6 +64,25 @@ layout(push_constant) uniform TextureEffect
     uint enabled;
 } effect;
 
+layout(set = 0, binding = 3) uniform sampler2DShadow sunShadowMap;
+layout(set = 0, binding = 4) uniform sampler2DShadow spotShadowMap;
+
+float shadowVisibility(sampler2DShadow shadowMap, mat4 lightViewProjection)
+{
+    vec4 lightClip = lightViewProjection * vec4(inWorldPosition, 1.0);
+    if (lightClip.w <= 0.0)
+    {
+        return 1.0;
+    }
+    vec3 lightNdc = lightClip.xyz / lightClip.w;
+    if (any(greaterThan(abs(lightNdc.xy), vec2(1.0))) || lightNdc.z < 0.0 || lightNdc.z >= 1.0)
+    {
+        return 1.0;
+    }
+    vec2 uv = lightNdc.xy * 0.5 + 0.5;
+    return textureLod(shadowMap, vec3(uv, lightNdc.z), 0.0);
+}
+
 void main()
 {
     if (object.materialParameters.y > 0.5) // Off
@@ -90,6 +111,14 @@ void main()
     vec3 materialSpecular = texture(specularTexture, inUV).rgb * object.specularColor.rgb;
     vec3 emission = texture(emissiveTexture, inUV).rgb;
 
+    if (object.materialParameters.z > 0.5)
+    {
+        vec2 tiles = floor(inUV * 12.0);
+        albedo = inColor * mix(0.72, 1.0, mod(tiles.x + tiles.y, 2.0));
+        materialSpecular = vec3(0.0);
+        emission = vec3(0.0);
+    }
+
     // Цилиндр
 
     vec3 normal = normalize(inNormal);
@@ -107,7 +136,8 @@ void main()
         specular = pow(max(dot(normal, halfVector), 0.0), object.materialParameters.x);
     }
 
-    vec3 light = scene.lightColorIntensity.rgb * scene.lightColorIntensity.w;
+    float sunVisibility = shadowVisibility(sunShadowMap, scene.sunViewProjection);
+    vec3 light = scene.lightColorIntensity.rgb * scene.lightColorIntensity.w * sunVisibility;
     vec3 finalColor = albedo * scene.ambientColorIntensity.rgb * scene.ambientColorIntensity.w + light * (albedo * (0.85 * diffuse) + materialSpecular * specular);
 
     // Окружение
@@ -118,9 +148,9 @@ void main()
     {
         vec3 toLight = pointLightData.pointLights[i].position.xyz - inWorldPosition;
 
-        float distanceSq = dot(toLight, toLight);
+        float distanceSq = max(dot(toLight, toLight), 1e-6);
 
-        vec3 pointDirection = normalize(toLight);
+        vec3 pointDirection = toLight * inversesqrt(max(dot(toLight, toLight), 1e-8));
 
         float pointDiffuse = max(dot(normal, pointDirection), 0.0);
         float pointSpecular = 0.0;
@@ -143,10 +173,11 @@ void main()
         SpotLight spot = spotLightData.spotLights[i];
 
         vec3 toLight = spot.position.xyz - inWorldPosition;
-        float distanceSquared = dot(toLight, toLight);
+        float distanceSquared = max(dot(toLight, toLight), 1e-6);
 
-        vec3 lightDirection = normalize(toLight);
-        vec3 spotDirection = normalize(spot.direction.xyz);
+        vec3 lightDirection = toLight * inversesqrt(max(dot(toLight, toLight), 1e-8));
+        vec3 spotDirection = dot(spot.direction.xyz, spot.direction.xyz) > 1e-8
+            ? normalize(spot.direction.xyz) : vec3(0.0, -1.0, 0.0);
     
         float cosAngle = dot(-lightDirection, spotDirection);
         float innerCos = cos(radians(spot.coneAnglesDegrees.x));
@@ -169,6 +200,10 @@ void main()
 
         vec3 spotLight = spot.colorIntensity.rgb * spot.colorIntensity.w * coneFactor / distanceSquared;
 
+        if (i == 0 && scene.lightCounts.z != 0)
+        {
+            spotLight *= shadowVisibility(spotShadowMap, scene.spotViewProjection);
+        }
         finalColor += spotLight * (albedo * (0.85 * spotDiffuse) + materialSpecular * spotSpecular);
     }
 

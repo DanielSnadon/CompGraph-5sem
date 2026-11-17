@@ -68,6 +68,7 @@ int main() {
 
 	if (!application::initialize()) {
 		std::cerr << "Failed to initialize application\n";
+		application::shutdown();
 		status = EXIT_FAILURE;
 		goto err_application_init;
 	}
@@ -99,5 +100,5 @@ err_imgui_init:
 err_null_window:
 	glfwTerminate();
 
-	return 0;
+	return status;
 }

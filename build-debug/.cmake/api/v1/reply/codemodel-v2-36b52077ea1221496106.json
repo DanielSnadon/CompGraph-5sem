@@ -603,7 +603,7 @@
 				{
 					"directoryIndex" : 0,
 					"id" : "shaders::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-shaders-Debug-b2b116ad40c5b098205f.json",
+					"jsonFile" : "target-shaders-Debug-6a25c0a407fd971f074d.json",
 					"name" : "shaders",
 					"projectIndex" : 0
 				},
@@ -631,7 +631,7 @@
 				{
 					"directoryIndex" : 0,
 					"id" : "vulkan-starter-app::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-vulkan-starter-app-Debug-1ff2200277181c582578.json",
+					"jsonFile" : "target-vulkan-starter-app-Debug-ec7f5d1ca53ce2fa0cb5.json",
 					"name" : "vulkan-starter-app",
 					"projectIndex" : 0
 				}

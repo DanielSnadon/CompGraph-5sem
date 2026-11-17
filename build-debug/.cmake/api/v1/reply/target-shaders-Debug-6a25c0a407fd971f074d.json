@@ -18,7 +18,7 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 121,
+				"line" : 122,
 				"parent" : 0
 			}
 		]
@@ -50,7 +50,8 @@
 			[
 				1,
 				2,
-				3
+				3,
+				4
 			]
 		}
 	],
@@ -78,6 +79,12 @@
 			"backtrace" : 0,
 			"isGenerated" : true,
 			"path" : "shaders/basic.vert.spv.rule",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 0,
+			"isGenerated" : true,
+			"path" : "shaders/shadow.vert.spv.rule",
 			"sourceGroupIndex" : 1
 		}
 	],
