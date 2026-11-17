@@ -43,6 +43,19 @@ cmake --build build-debug
 
 <img src="https://github.com/DanielSnadon/CompGraph-5sem/blob/master/images/lab3gif.gif" width="70%">
 
+## Lab 3
+## < Наложение теней >
+
+How to start the simulation:
+
+```bash
+cmake --build build-debug
+./build-debug/vulkan-starter-app
+```
+
+#### Result:
+
+<img src="https://github.com/DanielSnadon/CompGraph-5sem/blob/master/images/lab4gif.gif" width="70%">
 
 ## Current total number of visits of all repositories related to 5 semester.
 <img src="https://count.getloli.com/@snadon5sem?name=snadon5sem&theme=e621&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto" alt=":3" />
