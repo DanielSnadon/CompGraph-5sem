@@ -75,11 +75,9 @@
 2208	2279	1790101414704233501	_deps/vk-bootstrap-build/libvk-bootstrap.a	d871f9dc975d3710
 99	2411	1793545052881072453	CMakeFiles/vulkan-starter-app.dir/_deps/imgui-src/imgui.cpp.o	9fc2d807db66e52f
 1663	1886	1794935337380039932	vulkan-starter-app	a3855c156f123792
-6	148	1794935335854064120	/home/snadon/ComputerGraphics-5sem/shaders/basic.frag.spv	32a73cb1e3404359
-7	145	1794935335850064184	/home/snadon/ComputerGraphics-5sem/shaders/basic.vert.spv	c80a37faddece6b1
+11	133	1794938008794663859	/home/snadon/ComputerGraphics-5sem/shaders/basic.frag.spv	2c78d18dee6ab849
+11	131	1794938008794321130	/home/snadon/ComputerGraphics-5sem/shaders/basic.vert.spv	fba16e837f2dc89
 5	1705	1790260656860907677	_deps/glm-build/glm/CMakeFiles/glm.dir/detail/glm.cpp.o	9890828e1e6ddb2e
 1706	1798	1790260658563101974	_deps/glm-build/glm/libglm.a	53b3c2746492b63a
 100	1086	1793545052881828193	CMakeFiles/vulkan-starter-app.dir/_deps/lodepng-src/lodepng.cpp.o	e2edb30996470688
 11	122	1794938008785664001	/home/snadon/ComputerGraphics-5sem/shaders/shadow.vert.spv	f67ed8dc9839f7c1
-11	131	1794938008794321130	/home/snadon/ComputerGraphics-5sem/shaders/basic.vert.spv	fba16e837f2dc89
-11	133	1794938008794663859	/home/snadon/ComputerGraphics-5sem/shaders/basic.frag.spv	2c78d18dee6ab849

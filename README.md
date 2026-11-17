@@ -43,7 +43,7 @@ cmake --build build-debug
 
 <img src="https://github.com/DanielSnadon/CompGraph-5sem/blob/master/images/lab3gif.gif" width="70%">
 
-## Lab 3
+## Lab 4
 ## < Наложение теней >
 
 How to start the simulation:
