@@ -48,26 +48,26 @@ glm::vec3 lightDirection(-0.5f, 1.0f, 0.3f);
 glm::vec3 lightColor(1.0f);
 float lightIntensity = 0.5f;
 
-// [new] staging buffer && command pool const
+// staging buffer && command pool const
 
 VkBuffer textureStagingBuffer = VK_NULL_HANDLE;
 VmaAllocation textureStagingAllocation = nullptr;
 VkCommandPool uploadCommandPool = VK_NULL_HANDLE;
 VkCommandBuffer uploadCommandBuffer = VK_NULL_HANDLE;
 
-// [new] imageView&Sampler const
+// imageView&Sampler const
 
 VkImageView textureImageView = VK_NULL_HANDLE;
 VkSampler textureSampler = VK_NULL_HANDLE;
 
-// [new] dynamic uniform buffer const
+// dynamic uniform buffer const
 
 VkBuffer modelUniformBuffer = VK_NULL_HANDLE;
 VmaAllocation modelUniformBufferAllocation = nullptr;
 unsigned char* modelUniformBufferMemory = nullptr;
 VkDeviceSize modelUniformStride = 0;
 
-// [new] Texture push structure
+// Texture push structure
 
 struct TexturePushConstants
 {
@@ -139,7 +139,7 @@ struct SpotLight {
     alignas(16) glm::vec4 coneAnglesDegrees{15.0f, 25.0f, 0.0f, 0.0f};
 };
 
-// [new] TextureMaterial structs
+// TextureMaterial structs
 
 struct TextureResource
 {
@@ -479,7 +479,7 @@ bool uploadTexture(TextureResource& texture)
 {
     auto& context = graphics::internal::context;
 
-	// [new] Texture
+	// Texture
 
 	VkImageCreateInfo textureImageInfo{
 		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -508,7 +508,7 @@ bool uploadTexture(TextureResource& texture)
 
 	const VkDeviceSize textureDataSize = texture.pixels.size();
 
-	// [new] Staging Buffer
+	// Staging Buffer
 	
 	VkBufferCreateInfo stagingBufferInfo{
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -551,7 +551,7 @@ bool uploadTexture(TextureResource& texture)
 		return false;
 	}
 
-	// [new] Barrier 1: Undefined -> Transfer_dst_optimal
+	// Barrier 1: Undefined -> Transfer_dst_optimal
 
 	VkImageMemoryBarrier textureToTransfer{
 		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -589,7 +589,7 @@ bool uploadTexture(TextureResource& texture)
 
 	vkCmdCopyBufferToImage(uploadCommandBuffer, textureStagingBuffer, texture.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &textureCopyRegion);
 
-	// [new] Barrier 2: Transfer_dst_optimal -> Shader_read_only_optimal
+	// Barrier 2: Transfer_dst_optimal -> Shader_read_only_optimal
 
 	VkImageMemoryBarrier textureToShaderRead{
 		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -627,7 +627,7 @@ bool uploadTexture(TextureResource& texture)
 		return false;
 	}
 
-	// [new] Sending&waiting command buffer...
+	// Sending&waiting command buffer...
 
 	VkSubmitInfo uploadSubmitInfo{
 		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -655,7 +655,7 @@ bool uploadTexture(TextureResource& texture)
 	textureStagingBuffer = VK_NULL_HANDLE;
 	textureStagingAllocation = nullptr;
 
-	// [new] ImageView
+	// ImageView
 	
 	VkImageViewCreateInfo textureViewInfo{
 		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -807,7 +807,7 @@ bool createShadowResources()
 
 bool initialize() {
 
-	// [new] Load texture
+	// Load texture
 
 	for (Material& material : materials)
 	{
@@ -860,7 +860,7 @@ bool initialize() {
 
 	auto& context = graphics::internal::context;
 
-	// [new] Dynamic buffer
+	// Dynamic buffer
 
 	VkPhysicalDeviceProperties deviceProperties{};
 	vkGetPhysicalDeviceProperties(context.physical_device, &deviceProperties);
@@ -894,7 +894,7 @@ bool initialize() {
 		return false;
 	}
 
-	// [new] Command pool&buffer
+	// Command pool&buffer
 
 	VkCommandPoolCreateInfo uploadPoolInfo{
 		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -921,7 +921,7 @@ bool initialize() {
 		return false;
 	}
 
-	// [new] Material upload + Sampler
+	// Material upload + Sampler
 
 	for (Material& material : materials)
 	{
@@ -971,7 +971,7 @@ bool initialize() {
 		return false;
 	}
 
-	// [new] Staging vertex buffer
+	// Staging vertex buffer
 
 	const VkDeviceSize vertexDataSize = cylinderVertices.size() * sizeof(Vertex);
 
@@ -1001,7 +1001,7 @@ bool initialize() {
 
 	vmaFlushAllocation(context.allocator, vertexStagingAllocation, 0, vertexDataSize);
 
-	// [new] Vertex-related Buffers
+	// Vertex-related Buffers
 
 	VkCommandBufferBeginInfo uploadBeginInfo{
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -1083,7 +1083,7 @@ bool initialize() {
 	vertexStagingBuffer = VK_NULL_HANDLE;
 	vertexStagingAllocation = nullptr;
 
-	// [new]  Index-related Buffers
+	//  Index-related Buffers
 
 	const size_t indexDataSize = cylinderIndices.size() * sizeof(uint32_t);
 
@@ -2299,7 +2299,7 @@ Vertex makeLightLineVertex(const glm::vec3& position)
     };
 }
 
-#pragma region Render
+#pragma region Shadow
 
 glm::vec3 directionOr(const glm::vec3& value, const glm::vec3& fallback)
 {
@@ -2330,8 +2330,7 @@ void drawShadowMap(VkCommandBuffer cmd, ShadowMap& map, const glm::mat4& viewPro
         .subresourceRange = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1},
     };
     vkCmdPipelineBarrier(cmd,
-        map.readable ? VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT : VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-        depthStages, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+        map.readable ? VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT : VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, depthStages, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
     VkRenderingAttachmentInfo attachment{
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
@@ -2357,23 +2356,19 @@ void drawShadowMap(VkCommandBuffer cmd, ShadowMap& map, const glm::mat4& viewPro
         vkCmdSetViewport(cmd, 0, 1, &viewport);
         vkCmdSetScissor(cmd, 0, 1, &scissor);
         vkCmdSetDepthBias(cmd, shadowDepthBias, 0.0f, shadowSlopeBias);
-        vkCmdPushConstants(cmd, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT,
-                           shadowMatrixOffset, sizeof(viewProjection), &viewProjection);
+        vkCmdPushConstants(cmd, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, shadowMatrixOffset, sizeof(viewProjection), &viewProjection);
         const VkDeviceSize offset = 0;
         vkCmdBindVertexBuffers(cmd, 0, 1, &vertexBuffer, &offset);
         vkCmdBindIndexBuffer(cmd, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
         for (const RenderObject& object : renderObjects)
         {
-            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
-                1, 1, &materials[0].descriptorSet, 1, &object.uniformBufferOffset);
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &materials[0].descriptorSet, 1, &object.uniformBufferOffset);
             vkCmdDrawIndexed(cmd, cylinderIndexCount, 1, 0, 0, 0);
         }
 
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
-            1, 1, &materials[0].descriptorSet, 1, &floorObject.uniformBufferOffset);
-        vkCmdDrawIndexed(cmd, static_cast<uint32_t>(floorIndices.size()),
-                         1, cylinderIndexCount, floorVertexOffset, 0);
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &materials[0].descriptorSet, 1, &floorObject.uniformBufferOffset);
+        vkCmdDrawIndexed(cmd, static_cast<uint32_t>(floorIndices.size()), 1, cylinderIndexCount, floorVertexOffset, 0);
     }
     vkCmdEndRendering(cmd);
 
@@ -2381,10 +2376,13 @@ void drawShadowMap(VkCommandBuffer cmd, ShadowMap& map, const glm::mat4& viewPro
     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
     barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    vkCmdPipelineBarrier(cmd, depthStages, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                         0, 0, nullptr, 0, nullptr, 1, &barrier);
+    vkCmdPipelineBarrier(cmd, depthStages, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
     map.readable = true;
 }
+
+#pragma endregion
+
+#pragma region Render
 
 void render(const graphics::internal::FrameData& fd) {
 
@@ -2473,10 +2471,8 @@ void render(const graphics::internal::FrameData& fd) {
 
     const glm::vec3 sunDirection = directionOr(lightDirection, glm::vec3(0, 1, 0));
     const glm::vec3 shadowCenter(0.0f);
-    const glm::mat4 sunView = glm::lookAt(
-        shadowCenter + sunDirection * 10.0f, shadowCenter, shadowUp(sunDirection));
-    const glm::mat4 sunProjection = glm::orthoRH_ZO(
-        -shadowExtent, shadowExtent, -shadowExtent, shadowExtent, 0.1f, 24.0f);
+    const glm::mat4 sunView = glm::lookAt(shadowCenter + sunDirection * 10.0f, shadowCenter, shadowUp(sunDirection));
+    const glm::mat4 sunProjection = glm::orthoRH_ZO(-shadowExtent, shadowExtent, -shadowExtent, shadowExtent, 0.1f, 24.0f);
     const glm::mat4 sunViewProjection = sunProjection * sunView;
 
     const bool drawSpotShadow = spotShadowEnabled && spotLightCount > 0;
