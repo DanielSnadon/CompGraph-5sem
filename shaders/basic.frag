@@ -111,6 +111,8 @@ void main()
     vec3 materialSpecular = texture(specularTexture, inUV).rgb * object.specularColor.rgb;
     vec3 emission = texture(emissiveTexture, inUV).rgb;
 
+    // Пол
+
     if (object.materialParameters.z > 0.5)
     {
         vec2 tiles = floor(inUV * 12.0);
@@ -176,8 +178,7 @@ void main()
         float distanceSquared = max(dot(toLight, toLight), 1e-6);
 
         vec3 lightDirection = toLight * inversesqrt(max(dot(toLight, toLight), 1e-8));
-        vec3 spotDirection = dot(spot.direction.xyz, spot.direction.xyz) > 1e-8
-            ? normalize(spot.direction.xyz) : vec3(0.0, -1.0, 0.0);
+        vec3 spotDirection = dot(spot.direction.xyz, spot.direction.xyz) > 1e-8 ? normalize(spot.direction.xyz) : vec3(0.0, -1.0, 0.0);
     
         float cosAngle = dot(-lightDirection, spotDirection);
         float innerCos = cos(radians(spot.coneAnglesDegrees.x));

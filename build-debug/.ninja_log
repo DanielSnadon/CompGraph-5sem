@@ -81,3 +81,11 @@
 1706	1798	1790260658563101974	_deps/glm-build/glm/libglm.a	53b3c2746492b63a
 100	1086	1793545052881828193	CMakeFiles/vulkan-starter-app.dir/_deps/lodepng-src/lodepng.cpp.o	e2edb30996470688
 11	122	1794938008785664001	/home/snadon/ComputerGraphics-5sem/shaders/shadow.vert.spv	f67ed8dc9839f7c1
+5	1148	1795094930987721861	CMakeFiles/vulkan-starter-app.dir/source/application.cpp.o	53205248df790fc1
+1148	1360	1795094932131696895	vulkan-starter-app	a3855c156f123792
+3	868	1795095131252351230	CMakeFiles/vulkan-starter-app.dir/source/application.cpp.o	53205248df790fc1
+868	1029	1795095132118332330	vulkan-starter-app	a3855c156f123792
+3	939	1795100672186519955	CMakeFiles/vulkan-starter-app.dir/source/application.cpp.o	53205248df790fc1
+940	1117	1795100673123499276	vulkan-starter-app	a3855c156f123792
+3	975	1795100694496027572	CMakeFiles/vulkan-starter-app.dir/source/application.cpp.o	53205248df790fc1
+975	1153	1795100695468006120	vulkan-starter-app	a3855c156f123792

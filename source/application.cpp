@@ -242,6 +242,8 @@ bool showVisualization = true;
 
 std::array<RenderObject, 3> renderObjects{};
 
+// [new] Floor & shadow consts
+
 RenderObject floorObject;
 
 const std::array<Vertex, 4> floorVertices{{
@@ -694,7 +696,7 @@ bool loadTexturePixels(TextureResource& texture, const char* path)
     return true;
 }
 
-#pragma region Initze
+// [new] Creating ShadowMap
 
 bool createShadowMap(ShadowMap& map)
 {
@@ -716,8 +718,7 @@ bool createShadowMap(ShadowMap& map)
         .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
         .requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     };
-    if (vmaCreateImage(context.allocator, &imageInfo, &allocationInfo,
-                       &map.image, &map.allocation, nullptr) != VK_SUCCESS)
+    if (vmaCreateImage(context.allocator, &imageInfo, &allocationInfo, &map.image, &map.allocation, nullptr) != VK_SUCCESS)
     {
         return false;
     }
@@ -731,6 +732,8 @@ bool createShadowMap(ShadowMap& map)
     };
     return vkCreateImageView(context.device, &viewInfo, nullptr, &map.view) == VK_SUCCESS;
 }
+
+// [new] shadowMap struct killing
 
 void destroyShadowResources()
 {
@@ -752,6 +755,8 @@ void destroyShadowResources()
     shadowSampler = VK_NULL_HANDLE;
 }
 
+// [new] shadowMap struct preparing
+
 bool createShadowResources()
 {
     auto& context = graphics::internal::context;
@@ -761,16 +766,10 @@ bool createShadowResources()
         VkFormatProperties3 properties3{VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_3};
         VkFormatProperties2 properties2{VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2, &properties3};
         vkGetPhysicalDeviceFormatProperties2(context.physical_device, candidate, &properties2);
-        constexpr VkFormatFeatureFlags2 required =
-            VK_FORMAT_FEATURE_2_DEPTH_STENCIL_ATTACHMENT_BIT |
-            VK_FORMAT_FEATURE_2_SAMPLED_IMAGE_BIT |
-            VK_FORMAT_FEATURE_2_SAMPLED_IMAGE_DEPTH_COMPARISON_BIT;
+        constexpr VkFormatFeatureFlags2 required = VK_FORMAT_FEATURE_2_DEPTH_STENCIL_ATTACHMENT_BIT | VK_FORMAT_FEATURE_2_SAMPLED_IMAGE_BIT | VK_FORMAT_FEATURE_2_SAMPLED_IMAGE_DEPTH_COMPARISON_BIT;
         VkImageFormatProperties imageProperties{};
         if ((properties3.optimalTilingFeatures & required) == required &&
-            vkGetPhysicalDeviceImageFormatProperties(
-                context.physical_device, candidate, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
-                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                0, &imageProperties) == VK_SUCCESS &&
+            vkGetPhysicalDeviceImageFormatProperties(context.physical_device, candidate, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0, &imageProperties) == VK_SUCCESS &&
             imageProperties.maxExtent.width >= shadowMapSize &&
             imageProperties.maxExtent.height >= shadowMapSize)
         {
@@ -797,6 +796,7 @@ bool createShadowResources()
         .compareOp = VK_COMPARE_OP_LESS,
         .borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
     };
+
     if (vkCreateSampler(context.device, &samplerInfo, nullptr, &shadowSampler) != VK_SUCCESS)
     {
         destroyShadowResources();
@@ -804,6 +804,8 @@ bool createShadowResources()
     }
     return true;
 }
+
+#pragma region Initze
 
 bool initialize() {
 
@@ -837,7 +839,7 @@ bool initialize() {
 	blackTexture.height = 1;
 	blackTexture.pixels = {0, 0, 0, 255};
 
-	// Cylinder(s?)
+	// Cylinders & [new] floor
 
 	generateCylinderGeometry();
     cylinderIndexCount = static_cast<uint32_t>(cylinderIndices.size());
@@ -1231,8 +1233,7 @@ bool initialize() {
 	}
 
     floorObject.uniformBufferOffset = static_cast<uint32_t>(modelUniformStride * modelRecordIndex);
-    floorObject.uniformBufferMemory = reinterpret_cast<ModelUniformBufferObject*>(
-        modelUniformBufferMemory + floorObject.uniformBufferOffset);
+    floorObject.uniformBufferMemory = reinterpret_cast<ModelUniformBufferObject*>(modelUniformBufferMemory + floorObject.uniformBufferOffset);
 
 	// PointLight
 
@@ -2193,9 +2194,9 @@ void update([[maybe_unused]] double time) {
 	ImGui::Checkbox("Visualization", &showVisualization);
 
     ImGui::SliderFloat("Sun shadow half extent", &shadowExtent, 2.0f, 12.0f);
-    ImGui::SliderFloat("Shadow depth bias", &shadowDepthBias, 0.0f, 8.0f);
-    ImGui::SliderFloat("Shadow slope bias", &shadowSlopeBias, 0.0f, 4.0f);
-    ImGui::Checkbox("Spot light 1 casts shadows", &spotShadowEnabled);
+    ImGui::SliderFloat("Shadow depth bias", &shadowDepthBias, 0.0f, 20.0f);
+    ImGui::SliderFloat("Shadow slope bias", &shadowSlopeBias, 0.0f, 1000.0f);
+    ImGui::Checkbox("Spotlight shadow", &spotShadowEnabled);
 
 	ImGui::End();
 
@@ -2301,22 +2302,26 @@ Vertex makeLightLineVertex(const glm::vec3& position)
 
 #pragma region Shadow
 
+// [new] normalization
+
 glm::vec3 directionOr(const glm::vec3& value, const glm::vec3& fallback)
 {
     const float squaredLength = glm::dot(value, value);
     return squaredLength > 1e-8f ? value / std::sqrt(squaredLength) : fallback;
 }
 
+// [new] up direction
+
 glm::vec3 shadowUp(const glm::vec3& direction)
 {
-    return std::abs(direction.y) > 0.99f
-        ? glm::vec3(0, 0, 1) : glm::vec3(0, 1, 0);
+    return std::abs(direction.y) > 0.99f ? glm::vec3(0, 0, 1) : glm::vec3(0, 1, 0);
 }
+
+// [new] drawing shadowMap
 
 void drawShadowMap(VkCommandBuffer cmd, ShadowMap& map, const glm::mat4& viewProjection, bool drawGeometry)
 {
-    constexpr VkPipelineStageFlags depthStages =
-        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+    constexpr VkPipelineStageFlags depthStages = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
 
     VkImageMemoryBarrier barrier{
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -2329,8 +2334,7 @@ void drawShadowMap(VkCommandBuffer cmd, ShadowMap& map, const glm::mat4& viewPro
         .image = map.image,
         .subresourceRange = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1},
     };
-    vkCmdPipelineBarrier(cmd,
-        map.readable ? VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT : VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, depthStages, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+    vkCmdPipelineBarrier(cmd, map.readable ? VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT : VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, depthStages, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
     VkRenderingAttachmentInfo attachment{
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
@@ -2348,6 +2352,7 @@ void drawShadowMap(VkCommandBuffer cmd, ShadowMap& map, const glm::mat4& viewPro
     };
 
     vkCmdBeginRendering(cmd, &rendering);
+
     if (drawGeometry)
     {
         const VkViewport viewport{0, 0, float(shadowMapSize), float(shadowMapSize), 0, 1};
@@ -2469,6 +2474,8 @@ void render(const graphics::internal::FrameData& fd) {
 
 	// IV. double buffer fillmento
 
+	// [new] getting projection
+	
     const glm::vec3 sunDirection = directionOr(lightDirection, glm::vec3(0, 1, 0));
     const glm::vec3 shadowCenter(0.0f);
     const glm::mat4 sunView = glm::lookAt(shadowCenter + sunDirection * 10.0f, shadowCenter, shadowUp(sunDirection));
@@ -2483,8 +2490,7 @@ void render(const graphics::internal::FrameData& fd) {
         const glm::vec3 position(spot.position);
         const glm::vec3 direction = directionOr(glm::vec3(spot.direction), glm::vec3(0, -1, 0));
         const float halfAngle = std::clamp(spot.coneAnglesDegrees.y, 1.0f, 89.0f);
-        spotViewProjection = glm::perspectiveRH_ZO(glm::radians(2.0f * halfAngle), 1.0f, 0.05f, 30.0f)
-            * glm::lookAt(position, position + direction, shadowUp(direction));
+        spotViewProjection = glm::perspectiveRH_ZO(glm::radians(2.0f * halfAngle), 1.0f, 0.05f, 30.0f) * glm::lookAt(position, position + direction, shadowUp(direction));
     }
 
 	sceneUniformBufferMemory->viewProjection = projection * view;
@@ -2622,6 +2628,8 @@ void render(const graphics::internal::FrameData& fd) {
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
 	vkBeginCommandBuffer(fd.command_buffer, &beginInfo);
+
+	// [new] central call
 
     drawShadowMap(fd.command_buffer, sunShadow, sunViewProjection, true);
     drawShadowMap(fd.command_buffer, spotShadow, spotViewProjection, drawSpotShadow);
